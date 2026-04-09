@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v1.2 — 2025-04-09 21:45 ARG -->
+<!-- PAGOS HOCKEY CDP — Frontend v1.3 — 2025-04-09 22:00 ARG -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -2593,7 +2593,7 @@ async function abrirVisorMobile(pagoId, pago) {
   
   // Mostrar overlay con loading
   overlay.classList.add('active');
-  content.innerHTML = '<div style="color:#fff;font-size:0.9rem">Cargando...</div>';
+  content.innerHTML = '<div style="color:#fff;font-size:0.9rem">Cargando comprobante...</div>';
   document.getElementById('visor-jugador').textContent = pago.nombre || '—';
   document.getElementById('visor-equipo-mes').textContent = `${(pago.equipoId || '').replace(/_/g,' ')} · ${pago.mes || ''}`;
   document.getElementById('visor-estado').textContent = '—';
@@ -2603,49 +2603,73 @@ async function abrirVisorMobile(pagoId, pago) {
   // Bloquear scroll del body
   document.body.style.overflow = 'hidden';
   
-  _visorMobileData = { pagoId, pago };
-  
-  // Estado badge
-  const estadoEl = document.getElementById('visor-estado');
-  const estadoColors = {
-    'Aprobado': { bg: '#dcfce7', color: '#15803d' },
-    'Pendiente': { bg: '#fef9c3', color: '#854d0e' },
-    'Rechazado': { bg: '#fee2e2', color: '#b91c1c' }
-  };
-  const ec = estadoColors[pago.estado] || { bg: '#f3f4f6', color: '#374151' };
-  estadoEl.textContent = pago.estado || '—';
-  estadoEl.style.background = ec.bg;
-  estadoEl.style.color = ec.color;
-  
-  // Botones según estado
-  if (pago.estado !== 'Aprobado') {
-    btnAprobar.style.display = 'flex';
-  }
-  if (pago.estado !== 'Rechazado') {
-    btnRechazar.style.display = 'flex';
-  }
-  
-  // Cargar contenido (imagen desde URL de Drive)
-  if (pago.driveUrl) {
-    // Intentar mostrar como imagen primero
-    const img = new Image();
-    img.onload = function() {
-      content.innerHTML = `<img id="visor-mobile-img" src="${pago.driveUrl}" alt="Comprobante" style="max-width:100%;max-height:100%;object-fit:contain;">`;
-      setTimeout(() => initVisorZoom(), 100);
+  try {
+    // Llamar a la API para obtener el archivo en base64
+    const data = await api('getComprobante', { id: pagoId });
+    
+    if (!data.ok) {
+      content.innerHTML = `<div style="color:#fff;text-align:center;padding:40px">Error: ${data.msg || 'No se pudo cargar'}</div>`;
+      return;
+    }
+    
+    const c = data.comprobante;
+    _visorMobileData = { pagoId, pago: c };
+    
+    // Actualizar header con datos del comprobante
+    document.getElementById('visor-jugador').textContent = c.jugadorNombre || pago.nombre || '—';
+    document.getElementById('visor-equipo-mes').textContent = `${(c.equipoId || '').replace(/_/g,' ')} · ${c.mes || ''}`;
+    
+    // Estado badge
+    const estadoEl = document.getElementById('visor-estado');
+    const estadoColors = {
+      'Aprobado': { bg: '#dcfce7', color: '#15803d' },
+      'Pendiente': { bg: '#fef9c3', color: '#854d0e' },
+      'Rechazado': { bg: '#fee2e2', color: '#b91c1c' }
     };
-    img.onerror = function() {
-      // Si no carga como imagen, mostrar link
+    const ec = estadoColors[c.estado] || { bg: '#f3f4f6', color: '#374151' };
+    estadoEl.textContent = c.estado || '—';
+    estadoEl.style.background = ec.bg;
+    estadoEl.style.color = ec.color;
+    
+    // Botones según estado
+    if (c.estado !== 'Aprobado') {
+      btnAprobar.style.display = 'flex';
+    }
+    if (c.estado !== 'Rechazado') {
+      btnRechazar.style.display = 'flex';
+    }
+    
+    // Mostrar contenido (imagen o PDF en base64)
+    if (c.archivoB64) {
+      if (c.esImagen) {
+        content.innerHTML = `
+          <img id="visor-mobile-img" 
+               src="data:${c.mimeType};base64,${c.archivoB64}" 
+               alt="Comprobante"
+               style="max-width:100%;max-height:100%;object-fit:contain;">`;
+        setTimeout(() => initVisorZoom(), 100);
+      } else {
+        // PDF
+        content.innerHTML = `
+          <embed src="data:application/pdf;base64,${c.archivoB64}" 
+                 type="application/pdf"
+                 style="width:100%;height:100%;background:#fff;">`;
+      }
+    } else if (c.driveUrl) {
+      // Fallback: si no hay base64, mostrar link a Drive
       content.innerHTML = `
         <div style="color:#fff;text-align:center;padding:40px;">
-          <p style="margin-bottom:20px;">No se puede previsualizar este archivo</p>
-          <a href="${pago.driveUrl}" target="_blank" style="display:inline-block;padding:12px 24px;background:var(--mint);color:#333;border-radius:10px;font-weight:600;text-decoration:none;">
+          <p style="margin-bottom:20px;">No se pudo cargar la vista previa</p>
+          <a href="${c.driveUrl}" target="_blank" style="display:inline-block;padding:12px 24px;background:#56c596;color:#333;border-radius:10px;font-weight:600;text-decoration:none;">
             Abrir en Drive
           </a>
         </div>`;
-    };
-    img.src = pago.driveUrl;
-  } else {
-    content.innerHTML = '<div style="color:#fff;text-align:center;padding:40px">Sin archivo disponible</div>';
+    } else {
+      content.innerHTML = '<div style="color:#fff;text-align:center;padding:40px">Sin archivo disponible</div>';
+    }
+    
+  } catch(e) {
+    content.innerHTML = `<div style="color:#fff;text-align:center;padding:40px">Error: ${e.message}</div>`;
   }
 }
 
@@ -2668,7 +2692,7 @@ function visorRechazar() {
   if (!_visorMobileData) return;
   const { pagoId, pago } = _visorMobileData;
   cerrarVisorMobile();
-  abrirModalRechazar(pagoId, pago.nombre, pago.mes, pago.equipoId);
+  abrirModalRechazar(pagoId, pago.jugadorNombre || pago.nombre, pago.mes, pago.equipoId);
 }
 
 // Zoom táctil para imágenes
