@@ -541,6 +541,29 @@ tr:hover td { background: var(--gray-50); }
 .modal-body { margin-bottom: 24px; }
 .modal-footer { display: flex; gap: 12px; justify-content: flex-end; }
 
+/* Drop Zone */
+.drop-zone {
+  border: 2px dashed var(--gray-300);
+  border-radius: 12px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--gray-50);
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--mint);
+  background: rgba(152, 224, 210, 0.1);
+}
+.drop-zone .drop-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+.drop-zone p {
+  margin: 0;
+  color: var(--gray-600);
+}
+
 /* ══════════════════════════════════════════════════════════════════ */
 /* FILTROS */
 /* ══════════════════════════════════════════════════════════════════ */
@@ -1151,17 +1174,30 @@ tr:hover td { background: var(--gray-50); }
       <p style="font-size:1.2rem;font-weight:700;margin-bottom:16px;" id="cargar-nombre-jugador"></p>
       <p style="margin-bottom:16px;color:var(--gray-500);">Mes: <strong id="cargar-mes-display"></strong></p>
       
-      <div class="form-group">
-        <label>Link al Comprobante</label>
-        <input type="url" id="cargar-url" placeholder="https://drive.google.com/..." required>
-        <p style="font-size:0.75rem;color:var(--gray-400);margin-top:6px;">Pegá el link de Drive, foto, o imagen del comprobante</p>
+      <!-- Zona de carga de archivo -->
+      <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div id="drop-zone-content">
+          <div class="drop-icon">📎</div>
+          <p><strong>Tocá para elegir</strong> o arrastrá aquí</p>
+          <p style="font-size:0.8rem;color:var(--gray-400);margin-top:8px;">JPG, PNG o PDF (máx 10MB)</p>
+        </div>
+        <div id="preview-container" style="display:none;">
+          <img id="preview-img" style="max-width:100%;max-height:200px;border-radius:8px;">
+          <div id="preview-pdf" style="display:none;text-align:center;">
+            <div style="font-size:3rem;">📄</div>
+            <p id="preview-pdf-name" style="font-weight:600;"></p>
+          </div>
+          <button type="button" class="btn btn-sm btn-gray" style="margin-top:12px;" onclick="event.stopPropagation();limpiarArchivo()">Cambiar archivo</button>
+        </div>
       </div>
+      <input type="file" id="file-input" accept="image/*,.pdf" style="display:none;" onchange="handleFileSelect(event)">
+      
       <input type="hidden" id="cargar-jugador-id">
       <input type="hidden" id="cargar-mes">
     </div>
     <div class="modal-footer">
       <button class="btn btn-gray" onclick="cerrarModal('modal-cargar')">Cancelar</button>
-      <button class="btn btn-mint" onclick="enviarComprobante()">Cargar Comprobante</button>
+      <button class="btn btn-mint" onclick="enviarComprobante()" id="btn-enviar-comprobante">Cargar Comprobante</button>
     </div>
   </div>
 </div>
@@ -1779,39 +1815,150 @@ async function solicitarBaja(e) {
 // ══════════════════════════════════════════════════════════════════
 // CARGAR COMPROBANTE INDIVIDUAL
 // ══════════════════════════════════════════════════════════════════
+// Variable global para el archivo seleccionado
+let archivoSeleccionado = null;
+
 function abrirCargarPara(jugadorId, nombreJugador, mes) {
   document.getElementById('cargar-jugador-id').value = jugadorId;
   document.getElementById('cargar-mes').value = mes;
   document.getElementById('cargar-nombre-jugador').textContent = nombreJugador;
   document.getElementById('cargar-mes-display').textContent = mes;
-  document.getElementById('cargar-url').value = '';
+  limpiarArchivo();
   document.getElementById('modal-cargar').classList.add('active');
-  document.getElementById('cargar-url').focus();
+  
+  // Setup drag and drop
+  const dropZone = document.getElementById('drop-zone');
+  dropZone.addEventListener('dragover', handleDragOver);
+  dropZone.addEventListener('dragleave', handleDragLeave);
+  dropZone.addEventListener('drop', handleDrop);
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.classList.remove('drag-over');
+  
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    procesarArchivo(files[0]);
+  }
+}
+
+function handleFileSelect(e) {
+  const files = e.target.files;
+  if (files.length > 0) {
+    procesarArchivo(files[0]);
+  }
+}
+
+function procesarArchivo(file) {
+  // Validar tipo
+  const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+  if (!tiposPermitidos.includes(file.type)) {
+    toast('Solo se permiten imágenes (JPG, PNG) o PDF', 'error');
+    return;
+  }
+  
+  // Validar tamaño (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    toast('El archivo no puede superar 10MB', 'error');
+    return;
+  }
+  
+  archivoSeleccionado = file;
+  
+  // Mostrar preview
+  const dropContent = document.getElementById('drop-zone-content');
+  const previewContainer = document.getElementById('preview-container');
+  const previewImg = document.getElementById('preview-img');
+  const previewPdf = document.getElementById('preview-pdf');
+  const previewPdfName = document.getElementById('preview-pdf-name');
+  
+  dropContent.style.display = 'none';
+  previewContainer.style.display = 'block';
+  
+  if (file.type === 'application/pdf') {
+    previewImg.style.display = 'none';
+    previewPdf.style.display = 'block';
+    previewPdfName.textContent = file.name;
+  } else {
+    previewPdf.style.display = 'none';
+    previewImg.style.display = 'block';
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewImg.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function limpiarArchivo() {
+  archivoSeleccionado = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('drop-zone-content').style.display = 'block';
+  document.getElementById('preview-container').style.display = 'none';
+  document.getElementById('preview-img').src = '';
+  document.getElementById('preview-img').style.display = 'block';
+  document.getElementById('preview-pdf').style.display = 'none';
 }
 
 async function enviarComprobante() {
   const jugadorId = document.getElementById('cargar-jugador-id').value;
   const mes = document.getElementById('cargar-mes').value;
-  const driveUrl = document.getElementById('cargar-url').value.trim();
   
-  if (!driveUrl) {
-    toast('Ingresá el link del comprobante', 'error');
+  if (!archivoSeleccionado) {
+    toast('Seleccioná un archivo (foto o PDF)', 'error');
     return;
   }
   
   showLoading('Subiendo comprobante...');
   
-  const res = await apiPost('cargarComprobante', { jugadorId, mes, driveUrl });
+  // Convertir archivo a base64
+  const base64 = await fileToBase64(archivoSeleccionado);
+  
+  const res = await apiPost('cargarComprobante', { 
+    jugadorId, 
+    mes, 
+    archivo: base64,
+    nombreArchivo: archivoSeleccionado.name,
+    tipoArchivo: archivoSeleccionado.type
+  });
   
   hideLoading();
   
   if (res.ok) {
     toast('✅ Comprobante cargado correctamente', 'success');
     cerrarModal('modal-cargar');
+    limpiarArchivo();
     cargarPagos();
   } else {
     toast(res.msg || 'Error al cargar comprobante', 'error');
   }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Extraer solo la parte base64 (sin el prefijo data:...)
+      const base64 = reader.result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════
