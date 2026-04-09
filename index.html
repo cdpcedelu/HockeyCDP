@@ -635,6 +635,46 @@ tr:hover td { background: var(--gray-50); }
   font-size: 1.2rem;
   color: var(--gray-400);
 }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* LOADING OVERLAY */
+/* ══════════════════════════════════════════════════════════════════ */
+.loading-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+.loading-overlay.active { display: flex; }
+.loading-box {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 32px 48px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  animation: loadingPulse 0.3s ease-out;
+}
+@keyframes loadingPulse {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.loading-spinner {
+  width: 48px; height: 48px;
+  border: 4px solid var(--gray-200);
+  border-top-color: var(--mint-dark);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+.loading-box p {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-700);
+}
 </style>
 </head>
 <body>
@@ -701,9 +741,9 @@ tr:hover td { background: var(--gray-50); }
   
   <!-- NAV DELEGADO -->
   <nav id="nav-delegado" class="nav-tabs">
-    <button class="nav-tab active" onclick="showTab('tab-pagos')">💳 Pagos</button>
+    <button class="nav-tab active" onclick="showTab('tab-pagos')">💳 Carga de Comprobantes</button>
     <button class="nav-tab" onclick="showTab('tab-habilitaciones')">✅ Habilitaciones</button>
-    <button class="nav-tab" onclick="showTab('tab-alta')">➕ Alta Jugador</button>
+    <button class="nav-tab" onclick="showTab('tab-gestion')">👥 Gestión de Jugadores</button>
   </nav>
   
   <!-- NAV ADMIN -->
@@ -729,7 +769,7 @@ tr:hover td { background: var(--gray-50); }
       <div class="card">
         <div class="card-title">
           <span class="icon">💳</span>
-          Estado de Pagos — <span id="contador-pagos" style="font-weight:400;color:var(--gray-500);"></span>
+          Carga de Comprobantes — <span id="contador-pagos" style="font-weight:400;color:var(--gray-500);"></span>
         </div>
         <div class="tabla-wrapper">
           <table>
@@ -774,9 +814,10 @@ tr:hover td { background: var(--gray-50); }
     </div>
     
     <!-- ════════════════════════════════════════════════════════════ -->
-    <!-- TAB: ALTA JUGADOR (Delegado) -->
+    <!-- TAB: GESTIÓN DE JUGADORES (Delegado) - Altas y Bajas -->
     <!-- ════════════════════════════════════════════════════════════ -->
-    <div id="tab-alta" class="tab-content">
+    <div id="tab-gestion" class="tab-content">
+      <!-- SOLICITAR ALTA -->
       <div class="card">
         <div class="card-title">
           <span class="icon">➕</span>
@@ -806,7 +847,28 @@ tr:hover td { background: var(--gray-50); }
               <option value="BECA">Beca</option>
             </select>
           </div>
-          <button type="submit" class="btn btn-mint" style="width:100%;">Enviar Solicitud</button>
+          <button type="submit" class="btn btn-mint" style="width:100%;">Enviar Solicitud de Alta</button>
+        </form>
+      </div>
+      
+      <!-- SOLICITAR BAJA -->
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">➖</span>
+          Solicitar Baja de Jugador/a
+        </div>
+        <form id="form-baja" onsubmit="return solicitarBaja(event)">
+          <div class="form-group">
+            <label>Seleccionar Jugador/a</label>
+            <select id="baja-jugador" required>
+              <option value="">Seleccionar...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Motivo de la Baja</label>
+            <textarea id="baja-motivo" rows="2" style="width:100%;padding:12px;border:2px solid var(--gray-200);border-radius:var(--radius-sm);font-family:inherit;font-size:0.95rem;resize:vertical;" placeholder="Ej: Se muda, deja de jugar, etc."></textarea>
+          </div>
+          <button type="submit" class="btn btn-peach" style="width:100%;">Enviar Solicitud de Baja</button>
         </form>
       </div>
     </div>
@@ -1113,6 +1175,14 @@ tr:hover td { background: var(--gray-50); }
 <!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
 
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="loading-box">
+    <div class="loading-spinner"></div>
+    <p id="loading-text">Cargando...</p>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════════════════ -->
 <!-- JAVASCRIPT -->
 <!-- ══════════════════════════════════════════════════════════════════ -->
@@ -1145,16 +1215,21 @@ async function init() {
   await cargarEquipos();
   
   if (STATE.token) {
-    // Verificar si la sesión sigue válida
+    // Verificar si la sesión sigue válida y cargar meses
     try {
+      showLoading('Recuperando sesión...');
       const res = await api('getMeses');
       if (res.ok) {
         STATE.meses = res.meses;
+        hideLoading();
         showApp();
         return;
       }
-    } catch(e) {}
+    } catch(e) {
+      console.error('Error recuperando sesión:', e);
+    }
     // Sesión inválida
+    hideLoading();
     clearSession();
   }
   
@@ -1162,30 +1237,62 @@ async function init() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// API
+// LOADING
 // ══════════════════════════════════════════════════════════════════
-async function api(accion, params = {}) {
-  const url = new URL(API_URL);
-  url.searchParams.set('accion', accion);
-  if (STATE.token) url.searchParams.set('token', STATE.token);
-  for (const key in params) {
-    url.searchParams.set(key, params[key]);
-  }
-  
-  const res = await fetch(url.toString());
-  return await res.json();
+function showLoading(msg = 'Cargando...') {
+  document.getElementById('loading-text').textContent = msg;
+  document.getElementById('loading-overlay').classList.add('active');
 }
 
-async function apiPost(accion, params = {}) {
-  const url = new URL(API_URL);
-  url.searchParams.set('accion', accion);
-  if (STATE.token) url.searchParams.set('token', STATE.token);
-  for (const key in params) {
-    url.searchParams.set(key, params[key]);
-  }
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.remove('active');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// API
+// ══════════════════════════════════════════════════════════════════
+async function api(accion, params = {}, loadingMsg = null) {
+  if (loadingMsg) showLoading(loadingMsg);
   
-  const res = await fetch(url.toString(), { method: 'POST' });
-  return await res.json();
+  try {
+    const url = new URL(API_URL);
+    url.searchParams.set('accion', accion);
+    if (STATE.token) url.searchParams.set('token', STATE.token);
+    for (const key in params) {
+      url.searchParams.set(key, params[key]);
+    }
+    
+    const res = await fetch(url.toString());
+    const data = await res.json();
+    
+    if (loadingMsg) hideLoading();
+    return data;
+  } catch(e) {
+    if (loadingMsg) hideLoading();
+    throw e;
+  }
+}
+
+async function apiPost(accion, params = {}, loadingMsg = null) {
+  if (loadingMsg) showLoading(loadingMsg);
+  
+  try {
+    const url = new URL(API_URL);
+    url.searchParams.set('accion', accion);
+    if (STATE.token) url.searchParams.set('token', STATE.token);
+    for (const key in params) {
+      url.searchParams.set(key, params[key]);
+    }
+    
+    const res = await fetch(url.toString(), { method: 'POST' });
+    const data = await res.json();
+    
+    if (loadingMsg) hideLoading();
+    return data;
+  } catch(e) {
+    if (loadingMsg) hideLoading();
+    throw e;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1205,7 +1312,9 @@ function setLoginMode(mode) {
 
 async function cargarEquipos() {
   try {
+    showLoading('Conectando con el servidor...');
     const res = await api('getEquipos');
+    hideLoading();
     if (res.ok) {
       STATE.equipos = res.equipos;
       const select = document.getElementById('login-equipo');
@@ -1215,6 +1324,7 @@ async function cargarEquipos() {
       });
     }
   } catch(e) {
+    hideLoading();
     console.error('Error cargando equipos:', e);
   }
 }
@@ -1233,6 +1343,7 @@ async function handleLogin(e) {
     if (loginMode === 'delegado') {
       const equipoId = document.getElementById('login-equipo').value;
       const pin = document.getElementById('login-pin').value;
+      showLoading('Verificando credenciales...');
       res = await api('login', { equipoId, pin });
       
       if (res.ok) {
@@ -1245,6 +1356,7 @@ async function handleLogin(e) {
       }
     } else {
       const pin = document.getElementById('login-pin').value;
+      showLoading('Verificando credenciales...');
       res = await api('loginAdmin', { pin });
       
       if (res.ok) {
@@ -1258,15 +1370,18 @@ async function handleLogin(e) {
     }
     
     if (res.ok) {
-      // Cargar meses
+      showLoading('Cargando datos...');
       const mesesRes = await api('getMeses');
       if (mesesRes.ok) STATE.meses = mesesRes.meses;
+      hideLoading();
       showApp();
     } else {
+      hideLoading();
       errorDiv.textContent = res.msg || 'Error al ingresar';
       errorDiv.style.display = 'block';
     }
   } catch(e) {
+    hideLoading();
     errorDiv.textContent = 'Error de conexión';
     errorDiv.style.display = 'block';
   }
@@ -1335,6 +1450,7 @@ function showTab(tabId) {
   
   // Cargar datos según tab
   if (tabId === 'tab-habilitaciones') cargarHabilitaciones();
+  if (tabId === 'tab-gestion') cargarSelectBaja();
   if (tabId === 'tab-resumen') cargarResumenAdmin();
   if (tabId === 'tab-estadisticas') cargarEstadisticas();
   if (tabId === 'tab-comprobantes') cargarComprobantesAdmin();
@@ -1347,24 +1463,49 @@ function showTab(tabId) {
 // DELEGADO
 // ══════════════════════════════════════════════════════════════════
 async function cargarDatosDelegado() {
+  showLoading('Cargando jugadores del equipo...');
+  
+  // Asegurar que tenemos meses
+  if (!STATE.meses || STATE.meses.length === 0) {
+    const mesesRes = await api('getMeses');
+    if (mesesRes.ok && mesesRes.meses) {
+      STATE.meses = mesesRes.meses;
+    } else {
+      // Fallback
+      STATE.meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    }
+  }
+  
   // Cargar jugadores
   const jugRes = await api('getJugadores');
-  if (jugRes.ok) STATE.jugadores = jugRes.jugadores;
+  if (jugRes.ok) {
+    STATE.jugadores = jugRes.jugadores;
+  } else {
+    STATE.jugadores = [];
+    console.error('Error cargando jugadores:', jugRes.msg);
+  }
   
   // Llenar select de meses
   const selectMes = document.getElementById('select-mes');
   selectMes.innerHTML = '';
   const mesActual = new Date().getMonth();
   STATE.meses.forEach((m, i) => {
-    selectMes.innerHTML += `<option value="${m}" ${i === mesActual ? 'selected' : ''}>${m}</option>`;
+    const selected = i === mesActual ? 'selected' : '';
+    selectMes.innerHTML += `<option value="${m}" ${selected}>${m}</option>`;
   });
   
+  hideLoading();
   cargarPagos();
 }
 
 async function cargarPagos() {
+  showLoading('Cargando estado de pagos...');
+  
   const mes = document.getElementById('select-mes').value;
   const pagosRes = await api('getPagos');
+  
+  hideLoading();
+  
   if (!pagosRes.ok) return;
   
   STATE.pagos = pagosRes.pagos;
@@ -1430,7 +1571,10 @@ async function cargarPagos() {
 }
 
 async function cargarHabilitaciones() {
+  showLoading('Consultando habilitaciones...');
   const res = await api('getHabilitaciones');
+  hideLoading();
+  
   if (!res.ok) return;
   
   document.getElementById('mes-actual-hab').textContent = res.mesActual;
@@ -1464,11 +1608,47 @@ async function solicitarAlta(e) {
   const fechaNac = document.getElementById('alta-fechanac').value;
   const tipoCuota = document.getElementById('alta-tipocuota').value;
   
+  showLoading('Enviando solicitud de alta...');
   const res = await apiPost('solicitarAlta', { nombre, dni, fechaNac, tipoCuota });
+  hideLoading();
   
   if (res.ok) {
-    toast('Solicitud enviada correctamente', 'success');
+    toast('✅ Solicitud de alta enviada correctamente', 'success');
     document.getElementById('form-alta').reset();
+  } else {
+    toast(res.msg || 'Error al enviar solicitud', 'error');
+  }
+}
+
+function cargarSelectBaja() {
+  const select = document.getElementById('baja-jugador');
+  select.innerHTML = '<option value="">Seleccionar jugador/a...</option>';
+  STATE.jugadores.forEach(j => {
+    select.innerHTML += `<option value="${j.id}">${j.nombre}</option>`;
+  });
+}
+
+async function solicitarBaja(e) {
+  e.preventDefault();
+  
+  const jugadorId = document.getElementById('baja-jugador').value;
+  const motivo = document.getElementById('baja-motivo').value;
+  
+  if (!jugadorId) {
+    toast('Seleccioná un jugador/a', 'error');
+    return;
+  }
+  
+  const jugador = STATE.jugadores.find(j => j.id === jugadorId);
+  if (!confirm(`¿Confirmar solicitud de baja para ${jugador?.nombre}?`)) return;
+  
+  showLoading('Enviando solicitud de baja...');
+  const res = await apiPost('solicitarBaja', { jugadorId, motivo });
+  hideLoading();
+  
+  if (res.ok) {
+    toast('✅ Solicitud de baja enviada correctamente', 'success');
+    document.getElementById('form-baja').reset();
   } else {
     toast(res.msg || 'Error al enviar solicitud', 'error');
   }
@@ -1497,11 +1677,11 @@ async function enviarComprobante() {
     return;
   }
   
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = 'Cargando...';
+  showLoading('Subiendo comprobante...');
   
   const res = await apiPost('cargarComprobante', { jugadorId, mes, driveUrl });
+  
+  hideLoading();
   
   if (res.ok) {
     toast('✅ Comprobante cargado correctamente', 'success');
@@ -1510,17 +1690,15 @@ async function enviarComprobante() {
   } else {
     toast(res.msg || 'Error al cargar comprobante', 'error');
   }
-  
-  btn.disabled = false;
-  btn.textContent = 'Cargar Comprobante';
 }
 
 // ══════════════════════════════════════════════════════════════════
 // ADMIN
 // ══════════════════════════════════════════════════════════════════
 async function cargarResumenAdmin() {
+  showLoading('Cargando resumen...');
   const res = await api('getResumen');
-  if (!res.ok) return;
+  if (!res.ok) { hideLoading(); return; }
   
   document.getElementById('stat-pendientes').textContent = res.resumen.pagosPendientes;
   document.getElementById('stat-aprobados').textContent = res.resumen.pagosAprobados;
@@ -1528,7 +1706,9 @@ async function cargarResumenAdmin() {
   document.getElementById('stat-solicitudes').textContent = res.resumen.solicitudesPendientes;
   
   // Cargar tabla de pendientes
+  showLoading('Cargando pagos pendientes...');
   const pagosRes = await api('getAllPagos', { estado: 'Pendiente' });
+  hideLoading();
   if (!pagosRes.ok) return;
   
   const tbody = document.getElementById('tabla-pendientes-admin');
@@ -1564,8 +1744,11 @@ async function cargarEstadisticas() {
     });
   }
   
+  showLoading('Calculando estadísticas...');
   const mes = selectMes.value;
   const res = await api('getEstadisticas', { mes });
+  hideLoading();
+  
   if (!res.ok) return;
   
   document.getElementById('stat-recaudacion').textContent = '$' + res.estadisticas.totalRecaudado.toLocaleString('es-AR');
@@ -1585,7 +1768,9 @@ async function cargarEstadisticas() {
 }
 
 async function cargarComprobantesAdmin() {
+  showLoading('Cargando comprobantes...');
   const res = await api('getAllPagos');
+  hideLoading();
   if (!res.ok) return;
   
   STATE.pagos = res.pagos;
@@ -1643,8 +1828,10 @@ async function cargarJugadoresAdmin() {
     });
   }
   
+  showLoading('Cargando jugadores...');
   const equipoId = filtroEq.value;
   const res = await api('getJugadoresAdmin', { equipoId });
+  hideLoading();
   if (!res.ok) return;
   
   const tbody = document.getElementById('tabla-jugadores-admin');
@@ -1669,7 +1856,9 @@ async function cargarJugadoresAdmin() {
 }
 
 async function cargarSolicitudesAdmin() {
+  showLoading('Cargando solicitudes...');
   const res = await api('getSolicitudes');
+  hideLoading();
   if (!res.ok) return;
   
   const tbody = document.getElementById('tabla-solicitudes-admin');
@@ -1708,7 +1897,9 @@ async function cargarSolicitudesAdmin() {
 }
 
 async function cargarConfig() {
+  showLoading('Cargando configuración...');
   const res = await api('getParametros');
+  hideLoading();
   if (!res.ok) return;
   
   document.getElementById('config-cuota-normal').value = res.parametros.CUOTA_NORMAL || '';
@@ -1719,14 +1910,16 @@ async function cargarConfig() {
 async function guardarConfig(e) {
   e.preventDefault();
   
+  showLoading('Guardando configuración...');
   const res = await api('setParametros', {
     CUOTA_NORMAL: document.getElementById('config-cuota-normal').value,
     CUOTA_FUERA_CDU: document.getElementById('config-cuota-fuera').value,
     CUOTA_BONIFICADO: document.getElementById('config-cuota-bonif').value
   });
+  hideLoading();
   
   if (res.ok) {
-    toast('Configuración guardada', 'success');
+    toast('✅ Configuración guardada', 'success');
   } else {
     toast(res.msg || 'Error al guardar', 'error');
   }
@@ -1736,9 +1929,11 @@ async function guardarConfig(e) {
 // ACCIONES ADMIN
 // ══════════════════════════════════════════════════════════════════
 async function aprobarPago(pagoId) {
+  showLoading('Aprobando pago...');
   const res = await api('aprobar', { pagoId });
+  hideLoading();
   if (res.ok) {
-    toast('Pago aprobado', 'success');
+    toast('✅ Pago aprobado', 'success');
     cargarResumenAdmin();
     cargarComprobantesAdmin();
   } else {
@@ -1756,7 +1951,10 @@ async function confirmarRechazo() {
   const pagoId = document.getElementById('rechazar-id').value;
   const obs = document.getElementById('rechazar-obs').value;
   
+  showLoading('Rechazando pago...');
   const res = await api('rechazar', { pagoId, obs });
+  hideLoading();
+  
   if (res.ok) {
     toast('Pago rechazado', 'success');
     cerrarModal('modal-rechazar');
@@ -1768,9 +1966,11 @@ async function confirmarRechazo() {
 }
 
 async function aprobarSolicitud(solicitudId) {
+  showLoading('Aprobando solicitud...');
   const res = await api('aprobarSolicitud', { solicitudId });
+  hideLoading();
   if (res.ok) {
-    toast('Solicitud aprobada, jugador creado', 'success');
+    toast('✅ Solicitud aprobada, jugador creado', 'success');
     cargarSolicitudesAdmin();
     cargarResumenAdmin();
   } else {
@@ -1780,7 +1980,9 @@ async function aprobarSolicitud(solicitudId) {
 
 async function rechazarSolicitud(solicitudId) {
   const obs = prompt('Motivo del rechazo (opcional):');
+  showLoading('Rechazando solicitud...');
   const res = await api('rechazarSolicitud', { solicitudId, obs: obs || '' });
+  hideLoading();
   if (res.ok) {
     toast('Solicitud rechazada', 'success');
     cargarSolicitudesAdmin();
@@ -1793,7 +1995,9 @@ async function rechazarSolicitud(solicitudId) {
 async function eliminarJugador(jugadorId, nombre) {
   if (!confirm(`¿Eliminar a ${nombre}?`)) return;
   
+  showLoading('Eliminando jugador...');
   const res = await api('bajaJugador', { jugadorId });
+  hideLoading();
   if (res.ok) {
     toast('Jugador eliminado', 'success');
     cargarJugadoresAdmin();
@@ -1817,6 +2021,7 @@ function abrirModalAltaAdmin() {
 async function altaJugadorAdmin(e) {
   e.preventDefault();
   
+  showLoading('Agregando jugador...');
   const res = await api('altaJugadorAdmin', {
     equipoId: document.getElementById('alta-admin-equipo').value,
     nombre: document.getElementById('alta-admin-nombre').value,
@@ -1824,9 +2029,10 @@ async function altaJugadorAdmin(e) {
     fechaNac: document.getElementById('alta-admin-fechanac').value,
     tipoCuota: document.getElementById('alta-admin-tipocuota').value
   });
+  hideLoading();
   
   if (res.ok) {
-    toast('Jugador agregado', 'success');
+    toast('✅ Jugador agregado', 'success');
     cerrarModal('modal-alta-admin');
     cargarJugadoresAdmin();
   } else {
