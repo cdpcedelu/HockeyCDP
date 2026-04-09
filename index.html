@@ -1275,6 +1275,7 @@ async function init() {
   STATE.token = localStorage.getItem('hockey_token');
   STATE.rol = localStorage.getItem('hockey_rol');
   STATE.equipo = JSON.parse(localStorage.getItem('hockey_equipo') || 'null');
+  STATE.nombreAdmin = localStorage.getItem('hockey_nombreAdmin') || 'Admin';
   
   // Cargar equipos para login
   await cargarEquipos();
@@ -1438,8 +1439,10 @@ async function handleLogin(e) {
         STATE.token = res.token;
         STATE.rol = 'admin';
         STATE.equipo = null;
+        STATE.nombreAdmin = res.nombreAdmin || 'Admin';
         localStorage.setItem('hockey_token', res.token);
         localStorage.setItem('hockey_rol', 'admin');
+        localStorage.setItem('hockey_nombreAdmin', STATE.nombreAdmin);
         localStorage.removeItem('hockey_equipo');
       }
     }
@@ -1475,9 +1478,11 @@ function clearSession() {
   STATE.token = null;
   STATE.rol = null;
   STATE.equipo = null;
+  STATE.nombreAdmin = null;
   localStorage.removeItem('hockey_token');
   localStorage.removeItem('hockey_rol');
   localStorage.removeItem('hockey_equipo');
+  localStorage.removeItem('hockey_nombreAdmin');
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1498,7 +1503,7 @@ function showApp() {
   const headerEquipo = document.getElementById('header-equipo');
   
   if (STATE.rol === 'admin') {
-    badge.textContent = 'Admin';
+    badge.textContent = STATE.nombreAdmin;
     badge.className = 'badge-role badge-admin';
     headerEquipo.textContent = 'Panel Administrador';
     document.getElementById('nav-delegado').style.display = 'none';
