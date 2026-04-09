@@ -724,13 +724,12 @@ tr:hover td { background: var(--gray-50); }
       <div class="mes-selector">
         <label>Mes:</label>
         <select id="select-mes" onchange="cargarPagos()"></select>
-        <button class="btn btn-mint" onclick="abrirModalCargar()">➕ Cargar Comprobante</button>
       </div>
       
       <div class="card">
         <div class="card-title">
           <span class="icon">💳</span>
-          Estado de Pagos
+          Estado de Pagos — <span id="contador-pagos" style="font-weight:400;color:var(--gray-500);"></span>
         </div>
         <div class="tabla-wrapper">
           <table>
@@ -739,7 +738,7 @@ tr:hover td { background: var(--gray-50); }
                 <th>Jugador/a</th>
                 <th>Tipo Cuota</th>
                 <th>Estado</th>
-                <th>Acción</th>
+                <th>Comprobante</th>
               </tr>
             </thead>
             <tbody id="tabla-pagos"></tbody>
@@ -1013,7 +1012,7 @@ tr:hover td { background: var(--gray-50); }
 <!-- MODALES -->
 <!-- ══════════════════════════════════════════════════════════════════ -->
 
-<!-- Modal Cargar Comprobante -->
+<!-- Modal Cargar Comprobante Individual -->
 <div id="modal-cargar" class="modal-overlay">
   <div class="modal">
     <div class="modal-header">
@@ -1021,24 +1020,21 @@ tr:hover td { background: var(--gray-50); }
       <button class="modal-close" onclick="cerrarModal('modal-cargar')">✕</button>
     </div>
     <div class="modal-body">
-      <form id="form-cargar" onsubmit="return cargarComprobante(event)">
-        <div class="form-group">
-          <label>Jugador/a</label>
-          <select id="cargar-jugador" required></select>
-        </div>
-        <div class="form-group">
-          <label>Mes</label>
-          <select id="cargar-mes" required></select>
-        </div>
-        <div class="form-group">
-          <label>Link al Comprobante (Drive, Imagen, etc.)</label>
-          <input type="url" id="cargar-url" placeholder="https://drive.google.com/..." required>
-        </div>
-      </form>
+      <p style="margin-bottom:8px;color:var(--gray-600);">Jugador/a:</p>
+      <p style="font-size:1.2rem;font-weight:700;margin-bottom:16px;" id="cargar-nombre-jugador"></p>
+      <p style="margin-bottom:16px;color:var(--gray-500);">Mes: <strong id="cargar-mes-display"></strong></p>
+      
+      <div class="form-group">
+        <label>Link al Comprobante</label>
+        <input type="url" id="cargar-url" placeholder="https://drive.google.com/..." required>
+        <p style="font-size:0.75rem;color:var(--gray-400);margin-top:6px;">Pegá el link de Drive, foto, o imagen del comprobante</p>
+      </div>
+      <input type="hidden" id="cargar-jugador-id">
+      <input type="hidden" id="cargar-mes">
     </div>
     <div class="modal-footer">
       <button class="btn btn-gray" onclick="cerrarModal('modal-cargar')">Cancelar</button>
-      <button class="btn btn-mint" onclick="document.getElementById('form-cargar').requestSubmit()">Cargar</button>
+      <button class="btn btn-mint" onclick="enviarComprobante()">Cargar Comprobante</button>
     </div>
   </div>
 </div>
@@ -1375,27 +1371,37 @@ async function cargarPagos() {
   const tbody = document.getElementById('tabla-pagos');
   tbody.innerHTML = '';
   
+  let totalJug = 0, totalPagados = 0, totalBonif = 0;
+  
   STATE.jugadores.forEach(jug => {
     const pago = STATE.pagos.find(p => p.jugadorId === jug.id && p.mes === mes);
     const esBonif = jug.tipoCuota.includes('BONIF') || jug.tipoCuota.includes('BECA');
     
-    let estadoHTML, accionHTML;
+    totalJug++;
+    if (esBonif) totalBonif++;
+    
+    let estadoHTML, comprobanteHTML;
     
     if (esBonif) {
       estadoHTML = '<span class="estado-badge estado-aprobado">✓ Bonificado</span>';
-      accionHTML = '-';
+      comprobanteHTML = '<span style="color:var(--gray-400);">—</span>';
     } else if (!pago) {
       estadoHTML = '<span class="estado-badge estado-sin-cargar">Sin cargar</span>';
-      accionHTML = `<button class="btn btn-sm btn-mint" onclick="abrirModalCargarPara('${jug.id}', '${mes}')">Cargar</button>`;
+      comprobanteHTML = `<button class="btn btn-sm btn-mint" onclick="abrirCargarPara('${jug.id}', '${jug.nombre}', '${mes}')">📤 Cargar</button>`;
     } else if (pago.estado === 'Pendiente') {
       estadoHTML = '<span class="estado-badge estado-pendiente">⏳ Pendiente</span>';
-      accionHTML = `<a href="${pago.driveUrl}" target="_blank" class="btn btn-sm btn-sky">Ver</a>`;
+      comprobanteHTML = `<a href="${pago.driveUrl}" target="_blank" class="btn btn-sm btn-sky">👁️ Ver</a>`;
+      totalPagados++;
     } else if (pago.estado === 'Aprobado') {
       estadoHTML = '<span class="estado-badge estado-aprobado">✓ Aprobado</span>';
-      accionHTML = `<a href="${pago.driveUrl}" target="_blank" class="btn btn-sm btn-sky">Ver</a>`;
+      comprobanteHTML = `<a href="${pago.driveUrl}" target="_blank" class="btn btn-sm btn-sky">👁️ Ver</a>`;
+      totalPagados++;
     } else {
-      estadoHTML = `<span class="estado-badge estado-rechazado">✕ Rechazado</span>`;
-      accionHTML = `<button class="btn btn-sm btn-mint" onclick="abrirModalCargarPara('${jug.id}', '${mes}')">Recargar</button>`;
+      estadoHTML = `<span class="estado-badge estado-rechazado" title="${pago.obs || ''}">✕ Rechazado</span>`;
+      comprobanteHTML = `
+        <a href="${pago.driveUrl}" target="_blank" class="btn btn-sm btn-gray" style="margin-right:4px;">Ver anterior</a>
+        <button class="btn btn-sm btn-mint" onclick="abrirCargarPara('${jug.id}', '${jug.nombre}', '${mes}')">🔄 Recargar</button>
+      `;
     }
     
     const tipoBadgeClass = esBonif ? 'tipo-badge bonif' : 'tipo-badge';
@@ -1405,10 +1411,18 @@ async function cargarPagos() {
         <td class="jugador-nombre">${jug.nombre}</td>
         <td><span class="${tipoBadgeClass}">${jug.tipoCuota}</span></td>
         <td>${estadoHTML}</td>
-        <td>${accionHTML}</td>
+        <td>${comprobanteHTML}</td>
       </tr>
     `;
   });
+  
+  // Contador
+  const faltantes = totalJug - totalBonif - totalPagados;
+  document.getElementById('contador-pagos').innerHTML = `
+    <span style="color:var(--success);">${totalPagados} cargados</span> · 
+    <span style="color:var(--warning);">${faltantes} sin cargar</span> · 
+    <span style="color:var(--lavender-dark);">${totalBonif} bonificados</span>
+  `;
   
   if (STATE.jugadores.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><div class="icon">👥</div><h3>No hay jugadores cargados</h3></td></tr>';
@@ -1461,49 +1475,44 @@ async function solicitarAlta(e) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// MODAL CARGAR COMPROBANTE
+// CARGAR COMPROBANTE INDIVIDUAL
 // ══════════════════════════════════════════════════════════════════
-function abrirModalCargar() {
-  const selectJug = document.getElementById('cargar-jugador');
-  const selectMes = document.getElementById('cargar-mes');
-  
-  selectJug.innerHTML = '<option value="">Seleccionar...</option>';
-  STATE.jugadores.filter(j => !j.tipoCuota.includes('BONIF') && !j.tipoCuota.includes('BECA')).forEach(j => {
-    selectJug.innerHTML += `<option value="${j.id}">${j.nombre}</option>`;
-  });
-  
-  selectMes.innerHTML = '';
-  STATE.meses.forEach(m => {
-    selectMes.innerHTML += `<option value="${m}">${m}</option>`;
-  });
-  selectMes.value = document.getElementById('select-mes').value;
-  
+function abrirCargarPara(jugadorId, nombreJugador, mes) {
+  document.getElementById('cargar-jugador-id').value = jugadorId;
+  document.getElementById('cargar-mes').value = mes;
+  document.getElementById('cargar-nombre-jugador').textContent = nombreJugador;
+  document.getElementById('cargar-mes-display').textContent = mes;
   document.getElementById('cargar-url').value = '';
   document.getElementById('modal-cargar').classList.add('active');
+  document.getElementById('cargar-url').focus();
 }
 
-function abrirModalCargarPara(jugadorId, mes) {
-  abrirModalCargar();
-  document.getElementById('cargar-jugador').value = jugadorId;
-  document.getElementById('cargar-mes').value = mes;
-}
-
-async function cargarComprobante(e) {
-  e.preventDefault();
-  
-  const jugadorId = document.getElementById('cargar-jugador').value;
+async function enviarComprobante() {
+  const jugadorId = document.getElementById('cargar-jugador-id').value;
   const mes = document.getElementById('cargar-mes').value;
-  const driveUrl = document.getElementById('cargar-url').value;
+  const driveUrl = document.getElementById('cargar-url').value.trim();
+  
+  if (!driveUrl) {
+    toast('Ingresá el link del comprobante', 'error');
+    return;
+  }
+  
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Cargando...';
   
   const res = await apiPost('cargarComprobante', { jugadorId, mes, driveUrl });
   
   if (res.ok) {
-    toast('Comprobante cargado correctamente', 'success');
+    toast('✅ Comprobante cargado correctamente', 'success');
     cerrarModal('modal-cargar');
     cargarPagos();
   } else {
     toast(res.msg || 'Error al cargar comprobante', 'error');
   }
+  
+  btn.disabled = false;
+  btn.textContent = 'Cargar Comprobante';
 }
 
 // ══════════════════════════════════════════════════════════════════
