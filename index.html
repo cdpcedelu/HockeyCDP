@@ -1428,7 +1428,10 @@ function showApp() {
     headerEquipo.textContent = 'Panel Administrador';
     document.getElementById('nav-delegado').style.display = 'none';
     document.getElementById('nav-admin').style.display = 'flex';
-    showTab('tab-resumen');
+    
+    // Activar tab resumen
+    document.getElementById('tab-resumen').classList.add('active');
+    document.querySelector('#nav-admin .nav-tab').classList.add('active');
     cargarResumenAdmin();
   } else {
     badge.textContent = 'Delegado';
@@ -1436,7 +1439,10 @@ function showApp() {
     headerEquipo.textContent = STATE.equipo?.nombre || '';
     document.getElementById('nav-delegado').style.display = 'flex';
     document.getElementById('nav-admin').style.display = 'none';
-    showTab('tab-pagos');
+    
+    // Activar tab pagos
+    document.getElementById('tab-pagos').classList.add('active');
+    document.querySelector('#nav-delegado .nav-tab').classList.add('active');
     cargarDatosDelegado();
   }
 }
@@ -1446,9 +1452,16 @@ function showTab(tabId) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   
   document.getElementById(tabId).classList.add('active');
-  event.target.classList.add('active');
+  
+  // Marcar el tab activo en la navegación
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    if (t.getAttribute('onclick')?.includes(tabId)) {
+      t.classList.add('active');
+    }
+  });
   
   // Cargar datos según tab
+  if (tabId === 'tab-pagos') cargarPagos();
   if (tabId === 'tab-habilitaciones') cargarHabilitaciones();
   if (tabId === 'tab-gestion') cargarSelectBaja();
   if (tabId === 'tab-resumen') cargarResumenAdmin();
