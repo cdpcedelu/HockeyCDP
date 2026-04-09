@@ -817,7 +817,7 @@ tr:hover td { background: var(--gray-50); }
     <div id="tab-pagos" class="tab-content">
       <div class="mes-selector">
         <label>Mes:</label>
-        <select id="select-mes" onchange="cargarPagos()"></select>
+        <select id="select-mes" onchange="cargarPagosUI()"></select>
       </div>
       
       <div class="card">
@@ -1258,12 +1258,25 @@ let STATE = {
   token: null,
   rol: null,
   equipo: null,
+  nombreAdmin: null,
   equipos: [],
   jugadores: [],
   meses: [],
   pagos: [],
-  filtroComprobantes: 'todos'
+  filtroComprobantes: 'todos',
+  // Cache timestamps
+  cache: {
+    jugadores: 0,
+    pagos: 0,
+    equipos: 0
+  }
 };
+
+const CACHE_TTL = 60000; // 1 minuto de cache
+
+function isCacheValid(key) {
+  return STATE.cache[key] && (Date.now() - STATE.cache[key] < CACHE_TTL);
+}
 
 // ══════════════════════════════════════════════════════════════════
 // INIT
@@ -1540,8 +1553,8 @@ function showTab(tabId) {
     }
   });
   
-  // Cargar datos según tab
-  if (tabId === 'tab-pagos') cargarPagos();
+  // Cargar datos según tab (solo si no hay cache válido)
+  if (tabId === 'tab-pagos') cargarPagosUI(); // Solo UI, no API
   if (tabId === 'tab-habilitaciones') cargarHabilitaciones();
   if (tabId === 'tab-gestion') cargarSelectBaja();
   if (tabId === 'tab-resumen') cargarResumenAdmin();
@@ -1556,52 +1569,66 @@ function showTab(tabId) {
 // DELEGADO
 // ══════════════════════════════════════════════════════════════════
 async function cargarDatosDelegado() {
-  showLoading('Cargando jugadores del equipo...');
+  // Si ya tenemos datos en cache válido, solo refrescar UI
+  if (isCacheValid('jugadores') && STATE.jugadores.length > 0) {
+    llenarSelectMeses();
+    cargarPagosUI();
+    return;
+  }
   
-  // Asegurar que tenemos meses
-  if (!STATE.meses || STATE.meses.length === 0) {
-    const mesesRes = await api('getMeses');
-    if (mesesRes.ok && mesesRes.meses) {
-      STATE.meses = mesesRes.meses;
-    } else {
-      // Fallback
+  showLoading('Cargando datos...');
+  
+  try {
+    // Una sola llamada que trae todo
+    const res = await api('getDatosDelegado');
+    
+    if (res.ok) {
+      STATE.meses = res.meses || ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      STATE.jugadores = res.jugadores || [];
+      STATE.pagos = res.pagos || [];
+      STATE.cache.jugadores = Date.now();
+      STATE.cache.pagos = Date.now();
+    }
+  } catch(e) {
+    console.error('Error:', e);
+    // Fallback meses
+    if (!STATE.meses.length) {
       STATE.meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     }
   }
   
-  // Cargar jugadores
-  const jugRes = await api('getJugadores');
-  if (jugRes.ok) {
-    STATE.jugadores = jugRes.jugadores;
-  } else {
-    STATE.jugadores = [];
-    console.error('Error cargando jugadores:', jugRes.msg);
-  }
-  
-  // Llenar select de meses
+  hideLoading();
+  llenarSelectMeses();
+  cargarPagosUI();
+}
+
+function llenarSelectMeses() {
   const selectMes = document.getElementById('select-mes');
+  if (selectMes.options.length > 0) return; // Ya está lleno
+  
   selectMes.innerHTML = '';
   const mesActual = new Date().getMonth();
   STATE.meses.forEach((m, i) => {
     const selected = i === mesActual ? 'selected' : '';
     selectMes.innerHTML += `<option value="${m}" ${selected}>${m}</option>`;
   });
-  
-  hideLoading();
-  cargarPagos();
 }
 
 async function cargarPagos() {
-  showLoading('Cargando estado de pagos...');
+  showLoading('Actualizando pagos...');
   
-  const mes = document.getElementById('select-mes').value;
   const pagosRes = await api('getPagos');
+  if (pagosRes.ok) {
+    STATE.pagos = pagosRes.pagos;
+    STATE.cache.pagos = Date.now();
+  }
   
   hideLoading();
-  
-  if (!pagosRes.ok) return;
-  
-  STATE.pagos = pagosRes.pagos;
+  cargarPagosUI();
+}
+
+function cargarPagosUI() {
+  const mes = document.getElementById('select-mes').value;
   const tbody = document.getElementById('tabla-pagos');
   tbody.innerHTML = '';
   
