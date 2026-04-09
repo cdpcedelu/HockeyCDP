@@ -1419,6 +1419,29 @@ async function apiPost(accion, params = {}, loadingMsg = null) {
   }
 }
 
+// POST con body para archivos grandes
+async function apiPostFile(accion, params = {}) {
+  try {
+    const url = new URL(API_URL);
+    url.searchParams.set('accion', accion);
+    if (STATE.token) url.searchParams.set('token', STATE.token);
+    
+    // Crear FormData con payload JSON
+    const formData = new FormData();
+    formData.append('payload', JSON.stringify(params));
+    
+    const res = await fetch(url.toString(), { 
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    return data;
+  } catch(e) {
+    console.error('apiPostFile error:', e);
+    throw e;
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════════════════════════════
@@ -1925,26 +1948,34 @@ async function enviarComprobante() {
   
   showLoading('Subiendo comprobante...');
   
-  // Convertir archivo a base64
-  const base64 = await fileToBase64(archivoSeleccionado);
-  
-  const res = await apiPost('cargarComprobante', { 
-    jugadorId, 
-    mes, 
-    archivo: base64,
-    nombreArchivo: archivoSeleccionado.name,
-    tipoArchivo: archivoSeleccionado.type
-  });
-  
-  hideLoading();
-  
-  if (res.ok) {
-    toast('✅ Comprobante cargado correctamente', 'success');
-    cerrarModal('modal-cargar');
-    limpiarArchivo();
-    cargarPagos();
-  } else {
-    toast(res.msg || 'Error al cargar comprobante', 'error');
+  try {
+    // Convertir archivo a base64
+    const base64 = await fileToBase64(archivoSeleccionado);
+    
+    // Usar apiPostFile para archivos grandes (manda en body, no en URL)
+    const res = await apiPostFile('cargarComprobante', { 
+      jugadorId, 
+      mes, 
+      archivo: base64,
+      nombreArchivo: archivoSeleccionado.name,
+      tipoArchivo: archivoSeleccionado.type
+    });
+    
+    hideLoading();
+    
+    if (res.ok) {
+      toast('✅ Comprobante cargado correctamente', 'success');
+      cerrarModal('modal-cargar');
+      limpiarArchivo();
+      cargarPagos();
+    } else {
+      toast(res.msg || 'Error al cargar comprobante', 'error');
+    }
+  } catch(e) {
+    hideLoading();
+    toast('Error de conexión al subir', 'error');
+    console.error(e);
+  };
   }
 }
 
