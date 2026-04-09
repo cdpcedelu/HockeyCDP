@@ -1542,16 +1542,16 @@ function showTab(tabId) {
     }
   });
   
-  // Cargar datos según tab (solo si no hay cache válido)
-  if (tabId === 'tab-pagos') cargarPagosUI(); // Solo UI, no API
-  if (tabId === 'tab-habilitaciones') cargarHabilitaciones();
+  // Solo renderizar UI, no llamar API (los datos ya están en STATE)
+  if (tabId === 'tab-pagos') cargarPagosUI();
+  if (tabId === 'tab-habilitaciones') renderHabilitaciones();
   if (tabId === 'tab-gestion') cargarSelectBaja();
-  if (tabId === 'tab-resumen') cargarResumenAdmin();
-  if (tabId === 'tab-estadisticas') cargarEstadisticas();
-  if (tabId === 'tab-comprobantes') cargarComprobantesAdmin();
-  if (tabId === 'tab-jugadores') cargarJugadoresAdmin();
-  if (tabId === 'tab-solicitudes') cargarSolicitudesAdmin();
-  if (tabId === 'tab-config') cargarConfig();
+  if (tabId === 'tab-resumen') renderResumenAdmin();
+  if (tabId === 'tab-estadisticas') renderEstadisticas();
+  if (tabId === 'tab-comprobantes') renderComprobantesAdmin();
+  if (tabId === 'tab-jugadores') renderJugadoresAdmin();
+  if (tabId === 'tab-solicitudes') renderSolicitudesAdmin();
+  if (tabId === 'tab-config') renderConfig();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1684,13 +1684,26 @@ async function cargarHabilitaciones() {
   const res = await api('getHabilitaciones');
   hideLoading();
   
-  if (!res.ok) return;
+  if (res.ok) {
+    STATE.habilitaciones = res.habilitaciones;
+    STATE.mesActualHab = res.mesActual;
+    STATE.cache.habilitaciones = Date.now();
+  }
+  renderHabilitaciones();
+}
+
+function renderHabilitaciones() {
+  // Si no hay datos, cargar
+  if (!STATE.habilitaciones) {
+    cargarHabilitaciones();
+    return;
+  }
   
-  document.getElementById('mes-actual-hab').textContent = res.mesActual;
+  document.getElementById('mes-actual-hab').textContent = STATE.mesActualHab || '';
   const tbody = document.getElementById('tabla-habilitaciones');
   tbody.innerHTML = '';
   
-  res.habilitaciones.forEach(h => {
+  STATE.habilitaciones.forEach(h => {
     const estadoHTML = h.habilitado 
       ? '<span class="estado-badge estado-habilitado">✓ Habilitado/a</span>'
       : '<span class="estado-badge estado-inhabilitado">✕ Inhabilitado/a</span>';
@@ -1807,23 +1820,39 @@ async function enviarComprobante() {
 async function cargarResumenAdmin() {
   showLoading('Cargando resumen...');
   const res = await api('getResumen');
-  if (!res.ok) { hideLoading(); return; }
+  if (res.ok) {
+    STATE.resumen = res.resumen;
+    STATE.cache.resumen = Date.now();
+  }
   
-  document.getElementById('stat-pendientes').textContent = res.resumen.pagosPendientes;
-  document.getElementById('stat-aprobados').textContent = res.resumen.pagosAprobados;
-  document.getElementById('stat-rechazados').textContent = res.resumen.pagosRechazados;
-  document.getElementById('stat-solicitudes').textContent = res.resumen.solicitudesPendientes;
-  
-  // Cargar tabla de pendientes
-  showLoading('Cargando pagos pendientes...');
+  // Cargar pagos pendientes
   const pagosRes = await api('getAllPagos', { estado: 'Pendiente' });
   hideLoading();
-  if (!pagosRes.ok) return;
+  if (pagosRes.ok) {
+    STATE.pagosPendientesAdmin = pagosRes.pagos;
+  }
+  
+  renderResumenAdmin();
+}
+
+function renderResumenAdmin() {
+  // Si no hay datos, cargar
+  if (!STATE.resumen) {
+    cargarResumenAdmin();
+    return;
+  }
+  
+  document.getElementById('stat-pendientes').textContent = STATE.resumen.pagosPendientes || 0;
+  document.getElementById('stat-aprobados').textContent = STATE.resumen.pagosAprobados || 0;
+  document.getElementById('stat-rechazados').textContent = STATE.resumen.pagosRechazados || 0;
+  document.getElementById('stat-solicitudes').textContent = STATE.resumen.solicitudesPendientes || 0;
   
   const tbody = document.getElementById('tabla-pendientes-admin');
   tbody.innerHTML = '';
   
-  pagosRes.pagos.forEach(p => {
+  const pagos = STATE.pagosPendientesAdmin || [];
+  
+  pagos.forEach(p => {
     tbody.innerHTML += `
       <tr>
         <td class="jugador-nombre">${p.nombre}</td>
@@ -1832,19 +1861,32 @@ async function cargarResumenAdmin() {
         <td>${p.fechaCarga}</td>
         <td class="btn-actions">
           <a href="${p.driveUrl}" target="_blank" class="btn btn-sm btn-sky">Ver</a>
-          <button class="btn btn-sm btn-success" onclick="aprobarPago('${p.id}')">✓ Aprobar</button>
-          <button class="btn btn-sm btn-danger" onclick="abrirModalRechazar('${p.id}')">✕ Rechazar</button>
+          <button class="btn btn-sm btn-success" onclick="aprobarPago('${p.id}')">✓</button>
+          <button class="btn btn-sm btn-danger" onclick="abrirModalRechazar('${p.id}')">✕</button>
         </td>
       </tr>
     `;
   });
   
-  if (pagosRes.pagos.length === 0) {
+  if (pagos.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="icon">✨</div><h3>No hay pagos pendientes</h3></td></tr>';
   }
 }
 
 async function cargarEstadisticas() {
+  showLoading('Calculando estadísticas...');
+  const mes = document.getElementById('select-mes-stats')?.value || '';
+  const res = await api('getEstadisticas', { mes });
+  hideLoading();
+  
+  if (res.ok) {
+    STATE.estadisticas = res.estadisticas;
+    STATE.cache.estadisticas = Date.now();
+  }
+  renderEstadisticas();
+}
+
+function renderEstadisticas() {
   // Llenar select meses si está vacío
   const selectMes = document.getElementById('select-mes-stats');
   if (selectMes.options.length <= 1) {
@@ -1853,24 +1895,23 @@ async function cargarEstadisticas() {
     });
   }
   
-  showLoading('Calculando estadísticas...');
-  const mes = selectMes.value;
-  const res = await api('getEstadisticas', { mes });
-  hideLoading();
+  // Si no hay datos, cargar
+  if (!STATE.estadisticas) {
+    cargarEstadisticas();
+    return;
+  }
   
-  if (!res.ok) return;
-  
-  document.getElementById('stat-recaudacion').textContent = '$' + res.estadisticas.totalRecaudado.toLocaleString('es-AR');
-  document.getElementById('stat-jugadores').textContent = res.estadisticas.totalJugadores;
+  document.getElementById('stat-recaudacion').textContent = '$' + (STATE.estadisticas.totalRecaudado || 0).toLocaleString('es-AR');
+  document.getElementById('stat-jugadores').textContent = STATE.estadisticas.totalJugadores || 0;
   
   // Por equipo
   const divEquipos = document.getElementById('stats-por-equipo');
   divEquipos.innerHTML = '';
-  for (const eq in res.estadisticas.porEquipo) {
+  for (const eq in STATE.estadisticas.porEquipo) {
     divEquipos.innerHTML += `
       <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--gray-100);">
         <span style="font-weight:600;">${eq}</span>
-        <span style="font-weight:700;color:var(--mint-dark);">${res.estadisticas.porEquipo[eq]} pagos</span>
+        <span style="font-weight:700;color:var(--mint-dark);">${STATE.estadisticas.porEquipo[eq]} pagos</span>
       </div>
     `;
   }
@@ -1880,18 +1921,25 @@ async function cargarComprobantesAdmin() {
   showLoading('Cargando comprobantes...');
   const res = await api('getAllPagos');
   hideLoading();
-  if (!res.ok) return;
-  
-  STATE.pagos = res.pagos;
+  if (res.ok) {
+    STATE.todosLosPagos = res.pagos;
+    STATE.cache.comprobantes = Date.now();
+  }
   renderComprobantesAdmin();
 }
 
 function renderComprobantesAdmin() {
+  // Si no hay datos, cargar
+  if (!STATE.todosLosPagos) {
+    cargarComprobantesAdmin();
+    return;
+  }
+  
   const tbody = document.getElementById('tabla-comprobantes-admin');
   tbody.innerHTML = '';
   
   const filtro = STATE.filtroComprobantes;
-  const pagos = filtro === 'todos' ? STATE.pagos : STATE.pagos.filter(p => p.estado === filtro);
+  const pagos = filtro === 'todos' ? STATE.todosLosPagos : STATE.todosLosPagos.filter(p => p.estado === filtro);
   
   pagos.forEach(p => {
     let estadoHTML;
@@ -1919,16 +1967,32 @@ function renderComprobantesAdmin() {
       </tr>
     `;
   });
+  
+  if (pagos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">📄</div><h3>No hay comprobantes</h3></td></tr>';
+  }
 }
 
 function filtrarComprobantes(filtro, btn) {
   STATE.filtroComprobantes = filtro;
   document.querySelectorAll('.filtro-chip').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
-  renderComprobantesAdmin();
+  renderComprobantesAdmin(); // Solo render, no API
 }
 
 async function cargarJugadoresAdmin() {
+  showLoading('Cargando jugadores...');
+  const equipoId = document.getElementById('filtro-equipo-jugadores')?.value || '';
+  const res = await api('getJugadoresAdmin', { equipoId });
+  hideLoading();
+  if (res.ok) {
+    STATE.jugadoresAdmin = res.jugadores;
+    STATE.cache.jugadoresAdmin = Date.now();
+  }
+  renderJugadoresAdmin();
+}
+
+function renderJugadoresAdmin() {
   // Llenar filtro equipos si está vacío
   const filtroEq = document.getElementById('filtro-equipo-jugadores');
   if (filtroEq.options.length <= 1) {
@@ -1937,16 +2001,16 @@ async function cargarJugadoresAdmin() {
     });
   }
   
-  showLoading('Cargando jugadores...');
-  const equipoId = filtroEq.value;
-  const res = await api('getJugadoresAdmin', { equipoId });
-  hideLoading();
-  if (!res.ok) return;
+  // Si no hay datos, cargar
+  if (!STATE.jugadoresAdmin) {
+    cargarJugadoresAdmin();
+    return;
+  }
   
   const tbody = document.getElementById('tabla-jugadores-admin');
   tbody.innerHTML = '';
   
-  res.jugadores.forEach(j => {
+  STATE.jugadoresAdmin.forEach(j => {
     const tipoBadgeClass = j.tipoCuota.includes('BONIF') || j.tipoCuota.includes('BECA') ? 'tipo-badge bonif' : 'tipo-badge';
     
     tbody.innerHTML += `
@@ -1962,18 +2026,34 @@ async function cargarJugadoresAdmin() {
       </tr>
     `;
   });
+  
+  if (STATE.jugadoresAdmin.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">👥</div><h3>No hay jugadores</h3></td></tr>';
+  }
 }
 
 async function cargarSolicitudesAdmin() {
   showLoading('Cargando solicitudes...');
   const res = await api('getSolicitudes');
   hideLoading();
-  if (!res.ok) return;
+  if (res.ok) {
+    STATE.solicitudes = res.solicitudes;
+    STATE.cache.solicitudes = Date.now();
+  }
+  renderSolicitudesAdmin();
+}
+
+function renderSolicitudesAdmin() {
+  // Si no hay datos, cargar
+  if (!STATE.solicitudes) {
+    cargarSolicitudesAdmin();
+    return;
+  }
   
   const tbody = document.getElementById('tabla-solicitudes-admin');
   tbody.innerHTML = '';
   
-  res.solicitudes.forEach(s => {
+  STATE.solicitudes.forEach(s => {
     let estadoHTML;
     if (s.estado === 'Pendiente') estadoHTML = '<span class="estado-badge estado-pendiente">⏳ Pendiente</span>';
     else if (s.estado === 'Aprobada') estadoHTML = '<span class="estado-badge estado-aprobado">✓ Aprobada</span>';
@@ -2000,7 +2080,7 @@ async function cargarSolicitudesAdmin() {
     `;
   });
   
-  if (res.solicitudes.length === 0) {
+  if (STATE.solicitudes.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">📋</div><h3>No hay solicitudes</h3></td></tr>';
   }
 }
@@ -2009,11 +2089,23 @@ async function cargarConfig() {
   showLoading('Cargando configuración...');
   const res = await api('getParametros');
   hideLoading();
-  if (!res.ok) return;
+  if (res.ok) {
+    STATE.parametros = res.parametros;
+    STATE.cache.config = Date.now();
+  }
+  renderConfig();
+}
+
+function renderConfig() {
+  // Si no hay datos, cargar
+  if (!STATE.parametros) {
+    cargarConfig();
+    return;
+  }
   
-  document.getElementById('config-cuota-normal').value = res.parametros.CUOTA_NORMAL || '';
-  document.getElementById('config-cuota-fuera').value = res.parametros.CUOTA_FUERA_CDU || '';
-  document.getElementById('config-cuota-bonif').value = res.parametros.CUOTA_BONIFICADO || '';
+  document.getElementById('config-cuota-normal').value = STATE.parametros.CUOTA_NORMAL || '';
+  document.getElementById('config-cuota-fuera').value = STATE.parametros.CUOTA_FUERA_CDU || '';
+  document.getElementById('config-cuota-bonif').value = STATE.parametros.CUOTA_BONIFICADO || '';
 }
 
 async function guardarConfig(e) {
