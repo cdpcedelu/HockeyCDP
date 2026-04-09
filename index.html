@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v1.8 — 2025-04-09 23:50 ARG -->
+<!-- PAGOS HOCKEY CDP — Frontend v1.9 — 2025-04-10 00:10 ARG -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -270,22 +270,29 @@ body {
 .nav-tabs {
   background: var(--white);
   border-bottom: 2px solid var(--gray-200);
-  padding: 0 24px;
+  padding: 0 16px;
   display: flex;
   gap: 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.nav-tabs::-webkit-scrollbar {
+  display: none;
 }
 .nav-tab {
-  padding: 16px 24px;
+  padding: 14px 18px;
   border: none;
   background: transparent;
   font-family: 'Nunito', sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--gray-500);
   cursor: pointer;
   border-bottom: 3px solid transparent;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s;
 }
 .nav-tab.active {
@@ -897,13 +904,53 @@ tr:hover td { background: var(--gray-50); }
   font-weight: 600;
 }
 
+/* Cards de comprobantes (mobile view) */
+.comprobante-card-mobile {
+  background: var(--white);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid var(--gray-100);
+}
+.comprobante-card-mobile .card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.comprobante-card-mobile .card-info {
+  flex: 1;
+  min-width: 0;
+}
+.comprobante-card-mobile .card-nombre {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--gray-800);
+}
+.comprobante-card-mobile .card-meta {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  margin-top: 2px;
+}
+.comprobante-card-mobile .card-fecha {
+  font-size: 0.78rem;
+  color: var(--gray-400);
+  margin-top: 4px;
+}
+.comprobante-card-mobile .card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 /* ══════════════════════════════════════════════════════════════════ */
 /* MEJORAS MOBILE */
 /* ══════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
   html { font-size: 18px; }
   
-  /* Evitar scroll horizontal */
+  /* Evitar scroll horizontal en contenido, pero permitir en tabs */
   body, .content, .card { 
     overflow-x: hidden;
     max-width: 100vw;
@@ -913,14 +960,16 @@ tr:hover td { background: var(--gray-50); }
   .header .emoji { font-size: 1.5rem; }
   .admin-badge { font-size: 0.75rem; padding: 4px 10px; }
   
+  /* Tabs en una línea scrolleable */
   .nav-tabs { 
-    gap: 4px;
-    flex-wrap: wrap;
+    padding: 0 12px;
+    gap: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
   }
   .nav-tab { 
-    padding: 10px 12px; 
-    font-size: 0.85rem; 
-    border-radius: 10px;
+    padding: 12px 14px; 
+    font-size: 0.8rem;
   }
   
   .card { 
@@ -1005,7 +1054,7 @@ tr:hover td { background: var(--gray-50); }
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     border: 1px solid var(--gray-100);
   }
-  .comprobante-card-mobile .card-header {
+  .comprobante-card-mobile .card-row {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -1026,10 +1075,16 @@ tr:hover td { background: var(--gray-50); }
     color: var(--gray-500);
     margin-top: 2px;
   }
+  .comprobante-card-mobile .card-fecha {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    margin-top: 4px;
+  }
   .comprobante-card-mobile .card-actions {
     display: flex;
     gap: 8px;
     margin-top: 12px;
+    flex-wrap: wrap;
   }
   
   /* Resumen por equipo badges - mobile */
@@ -1340,22 +1395,7 @@ tr:hover td { background: var(--gray-50); }
       </div>
       
       <div class="card">
-        <div class="tabla-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Jugador/a</th>
-                <th>Equipo</th>
-                <th>Mes</th>
-                <th>Estado</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-comprobantes-admin"></tbody>
-          </table>
-        </div>
+        <div id="comprobantes-container"></div>
       </div>
     </div>
     
@@ -2498,51 +2538,82 @@ function renderComprobantesAdmin() {
     return;
   }
   
-  const tbody = document.getElementById('tabla-comprobantes-admin');
-  tbody.innerHTML = '';
-  
+  const container = document.getElementById('comprobantes-container');
   const filtro = STATE.filtroComprobantes;
   const pagos = filtro === 'todos' ? STATE.todosLosPagos : STATE.todosLosPagos.filter(p => p.estado === filtro);
   
   const esMobile = window.innerWidth < 640;
   
-  pagos.forEach(p => {
-    let estadoHTML;
-    if (p.estado === 'Pendiente') estadoHTML = '<span class="estado-badge estado-pendiente">⏳</span>';
-    else if (p.estado === 'Aprobado') estadoHTML = '<span class="estado-badge estado-aprobado">✓</span>';
-    else estadoHTML = '<span class="estado-badge estado-rechazado">✕</span>';
-    
-    let acciones = `<button class="btn btn-sm btn-sky" onclick='abrirModalVer("${p.id}", ${JSON.stringify(p).replace(/'/g, "\\'")})'>👁️</button>`;
-    if (p.estado === 'Pendiente') {
-      acciones += `
-        <button class="btn btn-sm btn-success" onclick="aprobarPago('${p.id}')">✓</button>
-        <button class="btn btn-sm btn-danger" onclick="abrirModalRechazar('${p.id}','${(p.nombre||'').replace(/'/g,"\\'")}','${p.mes}','${p.equipoId}')">✕</button>
+  if (esMobile) {
+    // Vista de cards para mobile
+    let html = '';
+    pagos.forEach(p => {
+      let estadoClass, estadoText;
+      if (p.estado === 'Pendiente') { estadoClass = 'estado-pendiente'; estadoText = '⏳ Pendiente'; }
+      else if (p.estado === 'Aprobado') { estadoClass = 'estado-aprobado'; estadoText = '✓ Aprobado'; }
+      else { estadoClass = 'estado-rechazado'; estadoText = '✕ Rechazado'; }
+      
+      let acciones = `<button class="btn btn-sm btn-sky" onclick='abrirModalVer("${p.id}", ${JSON.stringify(p).replace(/'/g, "\\'")})'>👁️ Ver</button>`;
+      if (p.estado === 'Pendiente') {
+        acciones += `
+          <button class="btn btn-sm btn-success" onclick="aprobarPago('${p.id}')">✓</button>
+          <button class="btn btn-sm btn-danger" onclick="abrirModalRechazar('${p.id}','${(p.nombre||'').replace(/'/g,"\\'")}','${p.mes}','${p.equipoId}')">✕</button>
+        `;
+      }
+      
+      html += `
+        <div class="comprobante-card-mobile">
+          <div class="card-row">
+            <div class="card-info">
+              <div class="card-nombre">${p.nombre}</div>
+              <div class="card-meta">${(p.equipoId||'').replace(/_/g,' ')} · ${p.mes}</div>
+              ${p.fechaCarga ? `<div class="card-fecha">📅 ${p.fechaCarga}</div>` : ''}
+            </div>
+            <span class="estado-badge ${estadoClass}">${estadoText}</span>
+          </div>
+          <div class="card-actions">${acciones}</div>
+        </div>
       `;
+    });
+    
+    if (pagos.length === 0) {
+      html = '<div class="empty-state"><div class="icon">📄</div><h3>No hay comprobantes</h3></div>';
     }
     
-    if (esMobile) {
-      // Vista de cards para mobile - estado y acciones en la misma fila
-      tbody.innerHTML += `
-        <tr>
-          <td colspan="7" style="padding:0;border:none;">
-            <div class="comprobante-card-mobile">
-              <div class="card-header">
-                <div class="card-info">
-                  <div class="card-nombre">${p.nombre}</div>
-                  <div class="card-meta">${(p.equipoId||'').replace(/_/g,' ')} · ${p.mes}</div>
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  ${estadoHTML}
-                  ${acciones}
-                </div>
-              </div>
-            </div>
-          </td>
-        </tr>
-      `;
-    } else {
-      // Vista de tabla para desktop
-      tbody.innerHTML += `
+    container.innerHTML = html;
+  } else {
+    // Vista de tabla para desktop
+    let html = `
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Jugador/a</th>
+            <th>Equipo</th>
+            <th>Mes</th>
+            <th>Estado</th>
+            <th>Fecha Carga</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    pagos.forEach(p => {
+      let estadoHTML;
+      if (p.estado === 'Pendiente') estadoHTML = '<span class="estado-badge estado-pendiente">⏳ Pendiente</span>';
+      else if (p.estado === 'Aprobado') estadoHTML = '<span class="estado-badge estado-aprobado">✓ Aprobado</span>';
+      else estadoHTML = '<span class="estado-badge estado-rechazado">✕ Rechazado</span>';
+      
+      let acciones = `<button class="btn btn-sm btn-sky" onclick='abrirModalVer("${p.id}", ${JSON.stringify(p).replace(/'/g, "\\'")})'>👁️</button>`;
+      if (p.estado === 'Pendiente') {
+        acciones += `
+          <button class="btn btn-sm btn-success" onclick="aprobarPago('${p.id}')">✓</button>
+          <button class="btn btn-sm btn-danger" onclick="abrirModalRechazar('${p.id}','${(p.nombre||'').replace(/'/g,"\\'")}','${p.mes}','${p.equipoId}')">✕</button>
+        `;
+      }
+      
+      html += `
         <tr>
           <td>#${p.id}</td>
           <td class="jugador-nombre">${p.nombre}</td>
@@ -2553,11 +2624,14 @@ function renderComprobantesAdmin() {
           <td class="btn-actions">${acciones}</td>
         </tr>
       `;
+    });
+    
+    if (pagos.length === 0) {
+      html += '<tr><td colspan="7" class="empty-state"><div class="icon">📄</div><h3>No hay comprobantes</h3></td></tr>';
     }
-  });
-  
-  if (pagos.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">📄</div><h3>No hay comprobantes</h3></td></tr>';
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
   }
 }
 
