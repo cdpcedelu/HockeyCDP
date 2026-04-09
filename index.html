@@ -1,0 +1,1865 @@
+<!DOCTYPE html>
+<!-- PAGOS HOCKEY CDP — Frontend v1.0 — 2025-04-09 17:30 ARG -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pagos Hockey CDP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --mint: #a8e6cf;
+  --mint-dark: #56c596;
+  --mint-light: #dffff0;
+  --lavender: #d4a5ff;
+  --lavender-dark: #b57edc;
+  --lavender-light: #f3e5ff;
+  --peach: #ffb7b2;
+  --peach-dark: #ff8a80;
+  --peach-light: #ffe5e3;
+  --sky: #a0d2ff;
+  --sky-dark: #64b5f6;
+  --sky-light: #e3f2fd;
+  --lemon: #fff59d;
+  --lemon-dark: #fdd835;
+  --white: #ffffff;
+  --gray-50: #fafafa;
+  --gray-100: #f5f5f5;
+  --gray-200: #eeeeee;
+  --gray-300: #e0e0e0;
+  --gray-400: #bdbdbd;
+  --gray-500: #9e9e9e;
+  --gray-600: #757575;
+  --gray-700: #616161;
+  --gray-800: #424242;
+  --gray-900: #212121;
+  --success: #66bb6a;
+  --warning: #ffca28;
+  --danger: #ef5350;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: 'Nunito', sans-serif;
+  background: linear-gradient(135deg, var(--mint-light) 0%, var(--sky-light) 50%, var(--lavender-light) 100%);
+  min-height: 100vh;
+  color: var(--gray-800);
+}
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* SPLASH & LOGIN */
+/* ══════════════════════════════════════════════════════════════════ */
+#splash-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.spinner {
+  width: 48px; height: 48px;
+  border: 4px solid var(--mint);
+  border-top-color: var(--mint-dark);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#splash-screen p { color: var(--gray-600); font-weight: 600; }
+
+#login-screen {
+  min-height: 100vh;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.login-card {
+  background: var(--white);
+  border-radius: 24px;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.login-logo {
+  width: 100px; height: 100px;
+  background: linear-gradient(135deg, var(--mint) 0%, var(--sky) 100%);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 48px;
+}
+.login-card h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--mint-dark) 0%, var(--sky-dark) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+.login-card .subtitle {
+  font-size: 0.9rem;
+  color: var(--gray-500);
+  margin-bottom: 32px;
+}
+.login-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin-bottom: 24px;
+}
+.login-tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--gray-500);
+  transition: all 0.2s;
+}
+.login-tab.active {
+  background: var(--white);
+  color: var(--mint-dark);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.form-group { margin-bottom: 16px; text-align: left; }
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gray-600);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  color: var(--gray-800);
+  background: var(--white);
+  transition: all 0.2s;
+  outline: none;
+}
+.form-group input:focus, .form-group select:focus {
+  border-color: var(--mint-dark);
+  box-shadow: 0 0 0 4px rgba(86, 197, 150, 0.15);
+}
+.pin-input {
+  font-size: 1.5rem !important;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-weight: 700;
+}
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--mint-dark) 0%, var(--sky-dark) 100%);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(86, 197, 150, 0.4);
+  margin-top: 8px;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(86, 197, 150, 0.5); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.login-error {
+  background: var(--peach-light);
+  border: 2px solid var(--peach);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 16px;
+  display: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* APP SHELL */
+/* ══════════════════════════════════════════════════════════════════ */
+#app { display: none; min-height: 100vh; flex-direction: column; }
+
+.header {
+  background: linear-gradient(135deg, var(--mint-dark) 0%, var(--sky-dark) 100%);
+  color: var(--white);
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(86, 197, 150, 0.3);
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-logo {
+  width: 40px; height: 40px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+.header-info h1 { font-size: 1.1rem; font-weight: 700; line-height: 1.2; }
+.header-info span { font-size: 0.75rem; opacity: 0.85; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.badge-role {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.badge-delegado { background: rgba(255,255,255,0.2); }
+.badge-admin { background: var(--lemon); color: var(--gray-800); }
+.btn-logout {
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.3);
+  color: var(--white);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-logout:hover { background: rgba(255,255,255,0.25); }
+
+/* Navegación */
+.nav-tabs {
+  background: var(--white);
+  border-bottom: 2px solid var(--gray-200);
+  padding: 0 24px;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+}
+.nav-tab {
+  padding: 16px 24px;
+  border: none;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.nav-tab.active {
+  color: var(--mint-dark);
+  border-bottom-color: var(--mint-dark);
+}
+.nav-tab:hover:not(.active) { color: var(--gray-700); }
+
+/* Contenido */
+.content {
+  flex: 1;
+  padding: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* CARDS */
+/* ══════════════════════════════════════════════════════════════════ */
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-title .icon {
+  width: 32px; height: 32px;
+  background: var(--mint-light);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  text-align: center;
+  border-left: 4px solid var(--mint);
+}
+.stat-card.warning { border-left-color: var(--warning); }
+.stat-card.danger { border-left-color: var(--danger); }
+.stat-card.info { border-left-color: var(--sky); }
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--gray-800);
+  line-height: 1;
+}
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* TABLAS */
+/* ══════════════════════════════════════════════════════════════════ */
+.tabla-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+thead tr { background: var(--mint-light); }
+th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--gray-700);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--gray-200);
+}
+td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--gray-50); }
+.jugador-nombre { font-weight: 600; }
+
+/* Badges de estado */
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.estado-pendiente { background: var(--lemon); color: var(--gray-800); }
+.estado-aprobado { background: var(--mint-light); color: var(--mint-dark); border: 2px solid var(--mint); }
+.estado-rechazado { background: var(--peach-light); color: var(--danger); border: 2px solid var(--peach); }
+.estado-sin-cargar { background: var(--gray-100); color: var(--gray-500); font-style: italic; }
+.estado-habilitado { background: var(--mint-light); color: var(--mint-dark); }
+.estado-inhabilitado { background: var(--peach-light); color: var(--danger); }
+
+/* Tipo cuota badges */
+.tipo-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--lavender-light);
+  color: var(--lavender-dark);
+}
+.tipo-badge.bonif { background: var(--mint-light); color: var(--mint-dark); }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* BOTONES */
+/* ══════════════════════════════════════════════════════════════════ */
+.btn {
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-sm { padding: 8px 14px; font-size: 0.8rem; }
+.btn-mint { background: var(--mint); color: var(--gray-800); }
+.btn-mint:hover { background: var(--mint-dark); color: var(--white); }
+.btn-sky { background: var(--sky); color: var(--gray-800); }
+.btn-sky:hover { background: var(--sky-dark); color: var(--white); }
+.btn-peach { background: var(--peach); color: var(--gray-800); }
+.btn-peach:hover { background: var(--peach-dark); color: var(--white); }
+.btn-lavender { background: var(--lavender); color: var(--gray-800); }
+.btn-lavender:hover { background: var(--lavender-dark); color: var(--white); }
+.btn-gray { background: var(--gray-200); color: var(--gray-700); }
+.btn-gray:hover { background: var(--gray-300); }
+.btn-success { background: var(--success); color: var(--white); }
+.btn-danger { background: var(--danger); color: var(--white); }
+
+.btn-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* SELECTOR DE MES */
+/* ══════════════════════════════════════════════════════════════════ */
+.mes-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.mes-selector label {
+  font-weight: 700;
+  color: var(--gray-600);
+}
+.mes-selector select {
+  padding: 10px 16px;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  background: var(--white);
+  cursor: pointer;
+  outline: none;
+}
+.mes-selector select:focus {
+  border-color: var(--mint-dark);
+}
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* MODALES */
+/* ══════════════════════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 32px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.2s ease-out;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.modal-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--gray-800);
+}
+.modal-close {
+  width: 36px; height: 36px;
+  border: none;
+  background: var(--gray-100);
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-600);
+  transition: all 0.2s;
+}
+.modal-close:hover { background: var(--gray-200); }
+.modal-body { margin-bottom: 24px; }
+.modal-footer { display: flex; gap: 12px; justify-content: flex-end; }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* FILTROS */
+/* ══════════════════════════════════════════════════════════════════ */
+.filtros {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.filtro-chip {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid var(--gray-200);
+  background: var(--white);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filtro-chip.active {
+  border-color: var(--mint-dark);
+  background: var(--mint-light);
+  color: var(--mint-dark);
+}
+.filtro-chip:hover:not(.active) {
+  border-color: var(--gray-300);
+}
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* EMPTY STATE */
+/* ══════════════════════════════════════════════════════════════════ */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--gray-500);
+}
+.empty-state .icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+.empty-state h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gray-700);
+  margin-bottom: 8px;
+}
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* RESPONSIVE */
+/* ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .header { padding: 0 16px; }
+  .content { padding: 16px; }
+  .card { padding: 16px; }
+  .nav-tab { padding: 14px 16px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-number { font-size: 2rem; }
+  .login-card { padding: 32px 24px; }
+  .modal { padding: 24px; margin: 16px; }
+  table { font-size: 0.8rem; }
+  th, td { padding: 10px 12px; }
+  .btn { padding: 8px 14px; font-size: 0.8rem; }
+}
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* TOAST */
+/* ══════════════════════════════════════════════════════════════════ */
+.toast-container {
+  position: fixed;
+  top: 80px;
+  right: 24px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.toast {
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  animation: toastIn 0.3s ease-out;
+  border-left: 4px solid var(--mint-dark);
+}
+.toast.error { border-left-color: var(--danger); }
+.toast.warning { border-left-color: var(--warning); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.toast-icon { font-size: 1.2rem; }
+.toast-message { flex: 1; font-weight: 600; }
+.toast-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: var(--gray-400);
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- SPLASH -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="splash-screen">
+  <div class="spinner"></div>
+  <p>Cargando Hockey CDP...</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- LOGIN -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">🏑</div>
+    <h1>Pagos Hockey CDP</h1>
+    <p class="subtitle">Club de Profesionales • Gestión de Cuotas</p>
+    
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="setLoginMode('delegado')">Delegado</button>
+      <button class="login-tab" onclick="setLoginMode('admin')">Admin</button>
+    </div>
+    
+    <form id="login-form" onsubmit="return handleLogin(event)">
+      <div id="equipo-group" class="form-group">
+        <label>Equipo</label>
+        <select id="login-equipo" required>
+          <option value="">Seleccionar equipo...</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>PIN</label>
+        <input type="password" id="login-pin" class="pin-input" maxlength="6" placeholder="••••" required>
+      </div>
+      
+      <button type="submit" class="btn-primary" id="btn-login">Ingresar</button>
+      
+      <div id="login-error" class="login-error"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- APP -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div id="app">
+  <header class="header">
+    <div class="header-left">
+      <div class="header-logo">🏑</div>
+      <div class="header-info">
+        <h1>Hockey CDP</h1>
+        <span id="header-equipo"></span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="badge-rol" class="badge-role badge-delegado">Delegado</span>
+      <button class="btn-logout" onclick="logout()">Salir</button>
+    </div>
+  </header>
+  
+  <!-- NAV DELEGADO -->
+  <nav id="nav-delegado" class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('tab-pagos')">💳 Pagos</button>
+    <button class="nav-tab" onclick="showTab('tab-habilitaciones')">✅ Habilitaciones</button>
+    <button class="nav-tab" onclick="showTab('tab-alta')">➕ Alta Jugador</button>
+  </nav>
+  
+  <!-- NAV ADMIN -->
+  <nav id="nav-admin" class="nav-tabs" style="display:none;">
+    <button class="nav-tab active" onclick="showTab('tab-resumen')">📊 Resumen</button>
+    <button class="nav-tab" onclick="showTab('tab-estadisticas')">📈 Estadísticas</button>
+    <button class="nav-tab" onclick="showTab('tab-comprobantes')">💳 Comprobantes</button>
+    <button class="nav-tab" onclick="showTab('tab-jugadores')">👥 Jugadores</button>
+    <button class="nav-tab" onclick="showTab('tab-solicitudes')">📋 Solicitudes</button>
+    <button class="nav-tab" onclick="showTab('tab-config')">⚙️ Config</button>
+  </nav>
+  
+  <main class="content">
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB: PAGOS (Delegado) -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="tab-pagos" class="tab-content active">
+      <div class="mes-selector">
+        <label>Mes:</label>
+        <select id="select-mes" onchange="cargarPagos()"></select>
+        <button class="btn btn-mint" onclick="abrirModalCargar()">➕ Cargar Comprobante</button>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">💳</span>
+          Estado de Pagos
+        </div>
+        <div class="tabla-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Jugador/a</th>
+                <th>Tipo Cuota</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-pagos"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB: HABILITACIONES (Delegado) -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="tab-habilitaciones" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">✅</span>
+          Habilitaciones del Plantel
+        </div>
+        <p style="color:var(--gray-500);margin-bottom:16px;">Mes actual: <strong id="mes-actual-hab"></strong></p>
+        <div class="tabla-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Jugador/a</th>
+                <th>Tipo Cuota</th>
+                <th>Estado</th>
+                <th>Meses Pagados</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-habilitaciones"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB: ALTA JUGADOR (Delegado) -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="tab-alta" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">➕</span>
+          Solicitar Alta de Jugador/a
+        </div>
+        <form id="form-alta" onsubmit="return solicitarAlta(event)">
+          <div class="form-group">
+            <label>Nombre Completo</label>
+            <input type="text" id="alta-nombre" placeholder="APELLIDO NOMBRE" required>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="form-group">
+              <label>DNI</label>
+              <input type="text" id="alta-dni" placeholder="12345678">
+            </div>
+            <div class="form-group">
+              <label>Fecha Nacimiento</label>
+              <input type="date" id="alta-fechanac">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Cuota</label>
+            <select id="alta-tipocuota">
+              <option value="NORMAL">Normal</option>
+              <option value="DEPORTIVA (VIVE FUERA CDU)">Deportiva (Vive fuera CDU)</option>
+              <option value="SOCIAL (VIVE FUERA CDU)">Social (Vive fuera CDU)</option>
+              <option value="BECA">Beca</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-mint" style="width:100%;">Enviar Solicitud</button>
+        </form>
+      </div>
+    </div>
+    
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB: RESUMEN (Admin) -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="tab-resumen" class="tab-content">
+      <div class="stats-grid">
+        <div class="stat-card warning">
+          <div class="stat-number" id="stat-pendientes">0</div>
+          <div class="stat-label">Pagos Pendientes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="stat-aprobados">0</div>
+          <div class="stat-label">Pagos Aprobados</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-number" id="stat-rechazados">0</div>
+          <div class="stat-label">Pagos Rechazados</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-number" id="stat-solicitudes">0</div>
+          <div class="stat-label">Solicitudes Pendientes</div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">⏳</span>
+          Pagos Pendientes de Revisión
+        </div>
+        <div class="tabla-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Jugador/a</th>
+                <th>Equipo</th>
+                <th>Mes</th>
+                <th>Fecha Carga</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-pendientes-admin"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB: ESTADÍSTICAS (Admin) -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="tab-estadisticas" class="tab-content">
+      <div class="mes-selector">
+        <label>Filtrar por Mes:</label>
+        <select id="select-mes-stats" onchange="cargarEstadisticas()">
+          <option value="">Todos los meses</option>
+        </select>
+      </div>
+      
+      <div class="stats-grid">
+        <div class="stat-card" style="grid-column: span 2;">
+          <div class="stat-number" id="stat-recaudacion">$0</div>
+          <div class="stat-label">Recaudación Total</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-number" id="stat-jugadores">0</div>
+          <div class="stat-label">Total Jugadores</div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">📊</span>
+          Pagos por Equipo
+        </div>
+        <div id="stats-por-equipo"></div>
+      </div>
+    </div>
+    
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB: COMPROBANTES (Admin) -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="tab-comprobantes" class="tab-content">
+      <div class="filtros">
+        <button class="filtro-chip active" onclick="filtrarComprobantes('todos', this)">Todos</button>
+        <button class="filtro-chip" onclick="filtrarComprobantes('Pendiente', this)">Pendientes</button>
+        <button class="filtro-chip" onclick="filtrarComprobantes('Aprobado', this)">Aprobados</button>
+        <button class="filtro-chip" onclick="filtrarComprobantes('Rechazado', this)">Rechazados</button>
+      </div>
+      
+      <div class="card">
+        <div class="tabla-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Jugador/a</th>
+                <th>Equipo</th>
+                <th>Mes</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-comprobantes-admin"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB: JUGADORES (Admin) -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="tab-jugadores" class="tab-content">
+      <div class="mes-selector">
+        <label>Equipo:</label>
+        <select id="filtro-equipo-jugadores" onchange="cargarJugadoresAdmin()">
+          <option value="">Todos los equipos</option>
+        </select>
+        <button class="btn btn-lavender" onclick="abrirModalAltaAdmin()">➕ Agregar Jugador</button>
+      </div>
+      
+      <div class="card">
+        <div class="tabla-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Equipo</th>
+                <th>DNI</th>
+                <th>Tipo Cuota</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-jugadores-admin"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB: SOLICITUDES (Admin) -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="tab-solicitudes" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">📋</span>
+          Solicitudes de Alta
+        </div>
+        <div class="tabla-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Equipo</th>
+                <th>DNI</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-solicitudes-admin"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB: CONFIG (Admin) -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="tab-config" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">⚙️</span>
+          Configuración de Cuotas
+        </div>
+        <form id="form-config" onsubmit="return guardarConfig(event)">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+            <div class="form-group">
+              <label>Cuota Normal</label>
+              <input type="number" id="config-cuota-normal" placeholder="15000">
+            </div>
+            <div class="form-group">
+              <label>Cuota Fuera CDU</label>
+              <input type="number" id="config-cuota-fuera" placeholder="8000">
+            </div>
+            <div class="form-group">
+              <label>Cuota Bonificado</label>
+              <input type="number" id="config-cuota-bonif" placeholder="0">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-mint">Guardar Cambios</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- MODALES -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+
+<!-- Modal Cargar Comprobante -->
+<div id="modal-cargar" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Cargar Comprobante</h2>
+      <button class="modal-close" onclick="cerrarModal('modal-cargar')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-cargar" onsubmit="return cargarComprobante(event)">
+        <div class="form-group">
+          <label>Jugador/a</label>
+          <select id="cargar-jugador" required></select>
+        </div>
+        <div class="form-group">
+          <label>Mes</label>
+          <select id="cargar-mes" required></select>
+        </div>
+        <div class="form-group">
+          <label>Link al Comprobante (Drive, Imagen, etc.)</label>
+          <input type="url" id="cargar-url" placeholder="https://drive.google.com/..." required>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="cerrarModal('modal-cargar')">Cancelar</button>
+      <button class="btn btn-mint" onclick="document.getElementById('form-cargar').requestSubmit()">Cargar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Rechazar -->
+<div id="modal-rechazar" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Rechazar Comprobante</h2>
+      <button class="modal-close" onclick="cerrarModal('modal-rechazar')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:16px;">¿Estás seguro de rechazar este comprobante?</p>
+      <div class="form-group">
+        <label>Motivo del Rechazo</label>
+        <textarea id="rechazar-obs" rows="3" style="width:100%;padding:12px;border:2px solid var(--gray-200);border-radius:var(--radius-sm);font-family:inherit;font-size:0.95rem;resize:vertical;" placeholder="Ej: Comprobante ilegible, monto incorrecto..."></textarea>
+      </div>
+      <input type="hidden" id="rechazar-id">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="cerrarModal('modal-rechazar')">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmarRechazo()">Rechazar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Alta Admin -->
+<div id="modal-alta-admin" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Agregar Jugador</h2>
+      <button class="modal-close" onclick="cerrarModal('modal-alta-admin')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-alta-admin" onsubmit="return altaJugadorAdmin(event)">
+        <div class="form-group">
+          <label>Equipo</label>
+          <select id="alta-admin-equipo" required></select>
+        </div>
+        <div class="form-group">
+          <label>Nombre Completo</label>
+          <input type="text" id="alta-admin-nombre" placeholder="APELLIDO NOMBRE" required>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label>DNI</label>
+            <input type="text" id="alta-admin-dni" placeholder="12345678">
+          </div>
+          <div class="form-group">
+            <label>Fecha Nacimiento</label>
+            <input type="date" id="alta-admin-fechanac">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Cuota</label>
+          <select id="alta-admin-tipocuota">
+            <option value="NORMAL">Normal</option>
+            <option value="DEPORTIVA (VIVE FUERA CDU)">Deportiva (Vive fuera CDU)</option>
+            <option value="SOCIAL (VIVE FUERA CDU)">Social (Vive fuera CDU)</option>
+            <option value="BECA">Beca</option>
+            <option value="DT (BONIF)">DT (Bonificado)</option>
+            <option value="DELEGADO (BONIF)">Delegado (Bonificado)</option>
+            <option value="MONITOR (BONIF)">Monitor (Bonificado)</option>
+            <option value="AYUD TEC (BONIF)">Ayudante Técnico (Bonificado)</option>
+          </select>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="cerrarModal('modal-alta-admin')">Cancelar</button>
+      <button class="btn btn-lavender" onclick="document.getElementById('form-alta-admin').requestSubmit()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbxQ-NAXPWwOTGOiF5iwUlcz-8c8jeeEmwz_HeCzXIKK9AegukMfOfa4f8BmDbFxE63EOA/exec';
+
+let STATE = {
+  token: null,
+  rol: null,
+  equipo: null,
+  equipos: [],
+  jugadores: [],
+  meses: [],
+  pagos: [],
+  filtroComprobantes: 'todos'
+};
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+  // Recuperar sesión
+  STATE.token = localStorage.getItem('hockey_token');
+  STATE.rol = localStorage.getItem('hockey_rol');
+  STATE.equipo = JSON.parse(localStorage.getItem('hockey_equipo') || 'null');
+  
+  // Cargar equipos para login
+  await cargarEquipos();
+  
+  if (STATE.token) {
+    // Verificar si la sesión sigue válida
+    try {
+      const res = await api('getMeses');
+      if (res.ok) {
+        STATE.meses = res.meses;
+        showApp();
+        return;
+      }
+    } catch(e) {}
+    // Sesión inválida
+    clearSession();
+  }
+  
+  showLogin();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// API
+// ══════════════════════════════════════════════════════════════════
+async function api(accion, params = {}) {
+  const url = new URL(API_URL);
+  url.searchParams.set('accion', accion);
+  if (STATE.token) url.searchParams.set('token', STATE.token);
+  for (const key in params) {
+    url.searchParams.set(key, params[key]);
+  }
+  
+  const res = await fetch(url.toString());
+  return await res.json();
+}
+
+async function apiPost(accion, params = {}) {
+  const url = new URL(API_URL);
+  url.searchParams.set('accion', accion);
+  if (STATE.token) url.searchParams.set('token', STATE.token);
+  for (const key in params) {
+    url.searchParams.set(key, params[key]);
+  }
+  
+  const res = await fetch(url.toString(), { method: 'POST' });
+  return await res.json();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════════════
+let loginMode = 'delegado';
+
+function setLoginMode(mode) {
+  loginMode = mode;
+  document.querySelectorAll('.login-tab').forEach((tab, i) => {
+    tab.classList.toggle('active', (i === 0 && mode === 'delegado') || (i === 1 && mode === 'admin'));
+  });
+  document.getElementById('equipo-group').style.display = mode === 'delegado' ? 'block' : 'none';
+  document.getElementById('login-pin').value = '';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+async function cargarEquipos() {
+  try {
+    const res = await api('getEquipos');
+    if (res.ok) {
+      STATE.equipos = res.equipos;
+      const select = document.getElementById('login-equipo');
+      select.innerHTML = '<option value="">Seleccionar equipo...</option>';
+      res.equipos.forEach(eq => {
+        select.innerHTML += `<option value="${eq.id}">${eq.nombre}</option>`;
+      });
+    }
+  } catch(e) {
+    console.error('Error cargando equipos:', e);
+  }
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btn-login');
+  const errorDiv = document.getElementById('login-error');
+  
+  btn.disabled = true;
+  btn.textContent = 'Ingresando...';
+  errorDiv.style.display = 'none';
+  
+  try {
+    let res;
+    if (loginMode === 'delegado') {
+      const equipoId = document.getElementById('login-equipo').value;
+      const pin = document.getElementById('login-pin').value;
+      res = await api('login', { equipoId, pin });
+      
+      if (res.ok) {
+        STATE.token = res.token;
+        STATE.rol = 'delegado';
+        STATE.equipo = res.equipo;
+        localStorage.setItem('hockey_token', res.token);
+        localStorage.setItem('hockey_rol', 'delegado');
+        localStorage.setItem('hockey_equipo', JSON.stringify(res.equipo));
+      }
+    } else {
+      const pin = document.getElementById('login-pin').value;
+      res = await api('loginAdmin', { pin });
+      
+      if (res.ok) {
+        STATE.token = res.token;
+        STATE.rol = 'admin';
+        STATE.equipo = null;
+        localStorage.setItem('hockey_token', res.token);
+        localStorage.setItem('hockey_rol', 'admin');
+        localStorage.removeItem('hockey_equipo');
+      }
+    }
+    
+    if (res.ok) {
+      // Cargar meses
+      const mesesRes = await api('getMeses');
+      if (mesesRes.ok) STATE.meses = mesesRes.meses;
+      showApp();
+    } else {
+      errorDiv.textContent = res.msg || 'Error al ingresar';
+      errorDiv.style.display = 'block';
+    }
+  } catch(e) {
+    errorDiv.textContent = 'Error de conexión';
+    errorDiv.style.display = 'block';
+  }
+  
+  btn.disabled = false;
+  btn.textContent = 'Ingresar';
+}
+
+function logout() {
+  api('logout');
+  clearSession();
+  showLogin();
+}
+
+function clearSession() {
+  STATE.token = null;
+  STATE.rol = null;
+  STATE.equipo = null;
+  localStorage.removeItem('hockey_token');
+  localStorage.removeItem('hockey_rol');
+  localStorage.removeItem('hockey_equipo');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SCREENS
+// ══════════════════════════════════════════════════════════════════
+function showLogin() {
+  document.getElementById('splash-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('splash-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  
+  const badge = document.getElementById('badge-rol');
+  const headerEquipo = document.getElementById('header-equipo');
+  
+  if (STATE.rol === 'admin') {
+    badge.textContent = 'Admin';
+    badge.className = 'badge-role badge-admin';
+    headerEquipo.textContent = 'Panel Administrador';
+    document.getElementById('nav-delegado').style.display = 'none';
+    document.getElementById('nav-admin').style.display = 'flex';
+    showTab('tab-resumen');
+    cargarResumenAdmin();
+  } else {
+    badge.textContent = 'Delegado';
+    badge.className = 'badge-role badge-delegado';
+    headerEquipo.textContent = STATE.equipo?.nombre || '';
+    document.getElementById('nav-delegado').style.display = 'flex';
+    document.getElementById('nav-admin').style.display = 'none';
+    showTab('tab-pagos');
+    cargarDatosDelegado();
+  }
+}
+
+function showTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  
+  document.getElementById(tabId).classList.add('active');
+  event.target.classList.add('active');
+  
+  // Cargar datos según tab
+  if (tabId === 'tab-habilitaciones') cargarHabilitaciones();
+  if (tabId === 'tab-resumen') cargarResumenAdmin();
+  if (tabId === 'tab-estadisticas') cargarEstadisticas();
+  if (tabId === 'tab-comprobantes') cargarComprobantesAdmin();
+  if (tabId === 'tab-jugadores') cargarJugadoresAdmin();
+  if (tabId === 'tab-solicitudes') cargarSolicitudesAdmin();
+  if (tabId === 'tab-config') cargarConfig();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DELEGADO
+// ══════════════════════════════════════════════════════════════════
+async function cargarDatosDelegado() {
+  // Cargar jugadores
+  const jugRes = await api('getJugadores');
+  if (jugRes.ok) STATE.jugadores = jugRes.jugadores;
+  
+  // Llenar select de meses
+  const selectMes = document.getElementById('select-mes');
+  selectMes.innerHTML = '';
+  const mesActual = new Date().getMonth();
+  STATE.meses.forEach((m, i) => {
+    selectMes.innerHTML += `<option value="${m}" ${i === mesActual ? 'selected' : ''}>${m}</option>`;
+  });
+  
+  cargarPagos();
+}
+
+async function cargarPagos() {
+  const mes = document.getElementById('select-mes').value;
+  const pagosRes = await api('getPagos');
+  if (!pagosRes.ok) return;
+  
+  STATE.pagos = pagosRes.pagos;
+  const tbody = document.getElementById('tabla-pagos');
+  tbody.innerHTML = '';
+  
+  STATE.jugadores.forEach(jug => {
+    const pago = STATE.pagos.find(p => p.jugadorId === jug.id && p.mes === mes);
+    const esBonif = jug.tipoCuota.includes('BONIF') || jug.tipoCuota.includes('BECA');
+    
+    let estadoHTML, accionHTML;
+    
+    if (esBonif) {
+      estadoHTML = '<span class="estado-badge estado-aprobado">✓ Bonificado</span>';
+      accionHTML = '-';
+    } else if (!pago) {
+      estadoHTML = '<span class="estado-badge estado-sin-cargar">Sin cargar</span>';
+      accionHTML = `<button class="btn btn-sm btn-mint" onclick="abrirModalCargarPara('${jug.id}', '${mes}')">Cargar</button>`;
+    } else if (pago.estado === 'Pendiente') {
+      estadoHTML = '<span class="estado-badge estado-pendiente">⏳ Pendiente</span>';
+      accionHTML = `<a href="${pago.driveUrl}" target="_blank" class="btn btn-sm btn-sky">Ver</a>`;
+    } else if (pago.estado === 'Aprobado') {
+      estadoHTML = '<span class="estado-badge estado-aprobado">✓ Aprobado</span>';
+      accionHTML = `<a href="${pago.driveUrl}" target="_blank" class="btn btn-sm btn-sky">Ver</a>`;
+    } else {
+      estadoHTML = `<span class="estado-badge estado-rechazado">✕ Rechazado</span>`;
+      accionHTML = `<button class="btn btn-sm btn-mint" onclick="abrirModalCargarPara('${jug.id}', '${mes}')">Recargar</button>`;
+    }
+    
+    const tipoBadgeClass = esBonif ? 'tipo-badge bonif' : 'tipo-badge';
+    
+    tbody.innerHTML += `
+      <tr>
+        <td class="jugador-nombre">${jug.nombre}</td>
+        <td><span class="${tipoBadgeClass}">${jug.tipoCuota}</span></td>
+        <td>${estadoHTML}</td>
+        <td>${accionHTML}</td>
+      </tr>
+    `;
+  });
+  
+  if (STATE.jugadores.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><div class="icon">👥</div><h3>No hay jugadores cargados</h3></td></tr>';
+  }
+}
+
+async function cargarHabilitaciones() {
+  const res = await api('getHabilitaciones');
+  if (!res.ok) return;
+  
+  document.getElementById('mes-actual-hab').textContent = res.mesActual;
+  const tbody = document.getElementById('tabla-habilitaciones');
+  tbody.innerHTML = '';
+  
+  res.habilitaciones.forEach(h => {
+    const estadoHTML = h.habilitado 
+      ? '<span class="estado-badge estado-habilitado">✓ Habilitado/a</span>'
+      : '<span class="estado-badge estado-inhabilitado">✕ Inhabilitado/a</span>';
+    
+    const mesesStr = h.mesesPagados.length > 0 ? h.mesesPagados.join(', ') : '-';
+    const tipoBadgeClass = h.tipoCuota.includes('BONIF') || h.tipoCuota.includes('BECA') ? 'tipo-badge bonif' : 'tipo-badge';
+    
+    tbody.innerHTML += `
+      <tr>
+        <td class="jugador-nombre">${h.nombre}</td>
+        <td><span class="${tipoBadgeClass}">${h.tipoCuota}</span></td>
+        <td>${estadoHTML}</td>
+        <td style="font-size:0.8rem;color:var(--gray-500);">${mesesStr}</td>
+      </tr>
+    `;
+  });
+}
+
+async function solicitarAlta(e) {
+  e.preventDefault();
+  
+  const nombre = document.getElementById('alta-nombre').value;
+  const dni = document.getElementById('alta-dni').value;
+  const fechaNac = document.getElementById('alta-fechanac').value;
+  const tipoCuota = document.getElementById('alta-tipocuota').value;
+  
+  const res = await apiPost('solicitarAlta', { nombre, dni, fechaNac, tipoCuota });
+  
+  if (res.ok) {
+    toast('Solicitud enviada correctamente', 'success');
+    document.getElementById('form-alta').reset();
+  } else {
+    toast(res.msg || 'Error al enviar solicitud', 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MODAL CARGAR COMPROBANTE
+// ══════════════════════════════════════════════════════════════════
+function abrirModalCargar() {
+  const selectJug = document.getElementById('cargar-jugador');
+  const selectMes = document.getElementById('cargar-mes');
+  
+  selectJug.innerHTML = '<option value="">Seleccionar...</option>';
+  STATE.jugadores.filter(j => !j.tipoCuota.includes('BONIF') && !j.tipoCuota.includes('BECA')).forEach(j => {
+    selectJug.innerHTML += `<option value="${j.id}">${j.nombre}</option>`;
+  });
+  
+  selectMes.innerHTML = '';
+  STATE.meses.forEach(m => {
+    selectMes.innerHTML += `<option value="${m}">${m}</option>`;
+  });
+  selectMes.value = document.getElementById('select-mes').value;
+  
+  document.getElementById('cargar-url').value = '';
+  document.getElementById('modal-cargar').classList.add('active');
+}
+
+function abrirModalCargarPara(jugadorId, mes) {
+  abrirModalCargar();
+  document.getElementById('cargar-jugador').value = jugadorId;
+  document.getElementById('cargar-mes').value = mes;
+}
+
+async function cargarComprobante(e) {
+  e.preventDefault();
+  
+  const jugadorId = document.getElementById('cargar-jugador').value;
+  const mes = document.getElementById('cargar-mes').value;
+  const driveUrl = document.getElementById('cargar-url').value;
+  
+  const res = await apiPost('cargarComprobante', { jugadorId, mes, driveUrl });
+  
+  if (res.ok) {
+    toast('Comprobante cargado correctamente', 'success');
+    cerrarModal('modal-cargar');
+    cargarPagos();
+  } else {
+    toast(res.msg || 'Error al cargar comprobante', 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ADMIN
+// ══════════════════════════════════════════════════════════════════
+async function cargarResumenAdmin() {
+  const res = await api('getResumen');
+  if (!res.ok) return;
+  
+  document.getElementById('stat-pendientes').textContent = res.resumen.pagosPendientes;
+  document.getElementById('stat-aprobados').textContent = res.resumen.pagosAprobados;
+  document.getElementById('stat-rechazados').textContent = res.resumen.pagosRechazados;
+  document.getElementById('stat-solicitudes').textContent = res.resumen.solicitudesPendientes;
+  
+  // Cargar tabla de pendientes
+  const pagosRes = await api('getAllPagos', { estado: 'Pendiente' });
+  if (!pagosRes.ok) return;
+  
+  const tbody = document.getElementById('tabla-pendientes-admin');
+  tbody.innerHTML = '';
+  
+  pagosRes.pagos.forEach(p => {
+    tbody.innerHTML += `
+      <tr>
+        <td class="jugador-nombre">${p.nombre}</td>
+        <td>${p.equipoId}</td>
+        <td>${p.mes}</td>
+        <td>${p.fechaCarga}</td>
+        <td class="btn-actions">
+          <a href="${p.driveUrl}" target="_blank" class="btn btn-sm btn-sky">Ver</a>
+          <button class="btn btn-sm btn-success" onclick="aprobarPago('${p.id}')">✓ Aprobar</button>
+          <button class="btn btn-sm btn-danger" onclick="abrirModalRechazar('${p.id}')">✕ Rechazar</button>
+        </td>
+      </tr>
+    `;
+  });
+  
+  if (pagosRes.pagos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="icon">✨</div><h3>No hay pagos pendientes</h3></td></tr>';
+  }
+}
+
+async function cargarEstadisticas() {
+  // Llenar select meses si está vacío
+  const selectMes = document.getElementById('select-mes-stats');
+  if (selectMes.options.length <= 1) {
+    STATE.meses.forEach(m => {
+      selectMes.innerHTML += `<option value="${m}">${m}</option>`;
+    });
+  }
+  
+  const mes = selectMes.value;
+  const res = await api('getEstadisticas', { mes });
+  if (!res.ok) return;
+  
+  document.getElementById('stat-recaudacion').textContent = '$' + res.estadisticas.totalRecaudado.toLocaleString('es-AR');
+  document.getElementById('stat-jugadores').textContent = res.estadisticas.totalJugadores;
+  
+  // Por equipo
+  const divEquipos = document.getElementById('stats-por-equipo');
+  divEquipos.innerHTML = '';
+  for (const eq in res.estadisticas.porEquipo) {
+    divEquipos.innerHTML += `
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--gray-100);">
+        <span style="font-weight:600;">${eq}</span>
+        <span style="font-weight:700;color:var(--mint-dark);">${res.estadisticas.porEquipo[eq]} pagos</span>
+      </div>
+    `;
+  }
+}
+
+async function cargarComprobantesAdmin() {
+  const res = await api('getAllPagos');
+  if (!res.ok) return;
+  
+  STATE.pagos = res.pagos;
+  renderComprobantesAdmin();
+}
+
+function renderComprobantesAdmin() {
+  const tbody = document.getElementById('tabla-comprobantes-admin');
+  tbody.innerHTML = '';
+  
+  const filtro = STATE.filtroComprobantes;
+  const pagos = filtro === 'todos' ? STATE.pagos : STATE.pagos.filter(p => p.estado === filtro);
+  
+  pagos.forEach(p => {
+    let estadoHTML;
+    if (p.estado === 'Pendiente') estadoHTML = '<span class="estado-badge estado-pendiente">⏳ Pendiente</span>';
+    else if (p.estado === 'Aprobado') estadoHTML = '<span class="estado-badge estado-aprobado">✓ Aprobado</span>';
+    else estadoHTML = '<span class="estado-badge estado-rechazado">✕ Rechazado</span>';
+    
+    let acciones = `<a href="${p.driveUrl}" target="_blank" class="btn btn-sm btn-sky">Ver</a>`;
+    if (p.estado === 'Pendiente') {
+      acciones += `
+        <button class="btn btn-sm btn-success" onclick="aprobarPago('${p.id}')">✓</button>
+        <button class="btn btn-sm btn-danger" onclick="abrirModalRechazar('${p.id}')">✕</button>
+      `;
+    }
+    
+    tbody.innerHTML += `
+      <tr>
+        <td>#${p.id}</td>
+        <td class="jugador-nombre">${p.nombre}</td>
+        <td>${p.equipoId}</td>
+        <td>${p.mes}</td>
+        <td>${estadoHTML}</td>
+        <td>${p.fechaCarga}</td>
+        <td class="btn-actions">${acciones}</td>
+      </tr>
+    `;
+  });
+}
+
+function filtrarComprobantes(filtro, btn) {
+  STATE.filtroComprobantes = filtro;
+  document.querySelectorAll('.filtro-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderComprobantesAdmin();
+}
+
+async function cargarJugadoresAdmin() {
+  // Llenar filtro equipos si está vacío
+  const filtroEq = document.getElementById('filtro-equipo-jugadores');
+  if (filtroEq.options.length <= 1) {
+    STATE.equipos.forEach(eq => {
+      filtroEq.innerHTML += `<option value="${eq.id}">${eq.nombre}</option>`;
+    });
+  }
+  
+  const equipoId = filtroEq.value;
+  const res = await api('getJugadoresAdmin', { equipoId });
+  if (!res.ok) return;
+  
+  const tbody = document.getElementById('tabla-jugadores-admin');
+  tbody.innerHTML = '';
+  
+  res.jugadores.forEach(j => {
+    const tipoBadgeClass = j.tipoCuota.includes('BONIF') || j.tipoCuota.includes('BECA') ? 'tipo-badge bonif' : 'tipo-badge';
+    
+    tbody.innerHTML += `
+      <tr>
+        <td>#${j.id}</td>
+        <td class="jugador-nombre">${j.nombre}</td>
+        <td>${j.equipoId}</td>
+        <td>${j.dni || '-'}</td>
+        <td><span class="${tipoBadgeClass}">${j.tipoCuota}</span></td>
+        <td class="btn-actions">
+          <button class="btn btn-sm btn-peach" onclick="eliminarJugador('${j.id}', '${j.nombre}')">🗑️</button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+async function cargarSolicitudesAdmin() {
+  const res = await api('getSolicitudes');
+  if (!res.ok) return;
+  
+  const tbody = document.getElementById('tabla-solicitudes-admin');
+  tbody.innerHTML = '';
+  
+  res.solicitudes.forEach(s => {
+    let estadoHTML;
+    if (s.estado === 'Pendiente') estadoHTML = '<span class="estado-badge estado-pendiente">⏳ Pendiente</span>';
+    else if (s.estado === 'Aprobada') estadoHTML = '<span class="estado-badge estado-aprobado">✓ Aprobada</span>';
+    else estadoHTML = '<span class="estado-badge estado-rechazado">✕ Rechazada</span>';
+    
+    let acciones = '';
+    if (s.estado === 'Pendiente') {
+      acciones = `
+        <button class="btn btn-sm btn-success" onclick="aprobarSolicitud('${s.id}')">✓ Aprobar</button>
+        <button class="btn btn-sm btn-danger" onclick="rechazarSolicitud('${s.id}')">✕ Rechazar</button>
+      `;
+    }
+    
+    tbody.innerHTML += `
+      <tr>
+        <td>#${s.id}</td>
+        <td class="jugador-nombre">${s.nombre}</td>
+        <td>${s.equipoId}</td>
+        <td>${s.dni || '-'}</td>
+        <td>${estadoHTML}</td>
+        <td>${s.fechaSolicitud}</td>
+        <td class="btn-actions">${acciones}</td>
+      </tr>
+    `;
+  });
+  
+  if (res.solicitudes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">📋</div><h3>No hay solicitudes</h3></td></tr>';
+  }
+}
+
+async function cargarConfig() {
+  const res = await api('getParametros');
+  if (!res.ok) return;
+  
+  document.getElementById('config-cuota-normal').value = res.parametros.CUOTA_NORMAL || '';
+  document.getElementById('config-cuota-fuera').value = res.parametros.CUOTA_FUERA_CDU || '';
+  document.getElementById('config-cuota-bonif').value = res.parametros.CUOTA_BONIFICADO || '';
+}
+
+async function guardarConfig(e) {
+  e.preventDefault();
+  
+  const res = await api('setParametros', {
+    CUOTA_NORMAL: document.getElementById('config-cuota-normal').value,
+    CUOTA_FUERA_CDU: document.getElementById('config-cuota-fuera').value,
+    CUOTA_BONIFICADO: document.getElementById('config-cuota-bonif').value
+  });
+  
+  if (res.ok) {
+    toast('Configuración guardada', 'success');
+  } else {
+    toast(res.msg || 'Error al guardar', 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ACCIONES ADMIN
+// ══════════════════════════════════════════════════════════════════
+async function aprobarPago(pagoId) {
+  const res = await api('aprobar', { pagoId });
+  if (res.ok) {
+    toast('Pago aprobado', 'success');
+    cargarResumenAdmin();
+    cargarComprobantesAdmin();
+  } else {
+    toast(res.msg || 'Error al aprobar', 'error');
+  }
+}
+
+function abrirModalRechazar(pagoId) {
+  document.getElementById('rechazar-id').value = pagoId;
+  document.getElementById('rechazar-obs').value = '';
+  document.getElementById('modal-rechazar').classList.add('active');
+}
+
+async function confirmarRechazo() {
+  const pagoId = document.getElementById('rechazar-id').value;
+  const obs = document.getElementById('rechazar-obs').value;
+  
+  const res = await api('rechazar', { pagoId, obs });
+  if (res.ok) {
+    toast('Pago rechazado', 'success');
+    cerrarModal('modal-rechazar');
+    cargarResumenAdmin();
+    cargarComprobantesAdmin();
+  } else {
+    toast(res.msg || 'Error al rechazar', 'error');
+  }
+}
+
+async function aprobarSolicitud(solicitudId) {
+  const res = await api('aprobarSolicitud', { solicitudId });
+  if (res.ok) {
+    toast('Solicitud aprobada, jugador creado', 'success');
+    cargarSolicitudesAdmin();
+    cargarResumenAdmin();
+  } else {
+    toast(res.msg || 'Error al aprobar', 'error');
+  }
+}
+
+async function rechazarSolicitud(solicitudId) {
+  const obs = prompt('Motivo del rechazo (opcional):');
+  const res = await api('rechazarSolicitud', { solicitudId, obs: obs || '' });
+  if (res.ok) {
+    toast('Solicitud rechazada', 'success');
+    cargarSolicitudesAdmin();
+    cargarResumenAdmin();
+  } else {
+    toast(res.msg || 'Error al rechazar', 'error');
+  }
+}
+
+async function eliminarJugador(jugadorId, nombre) {
+  if (!confirm(`¿Eliminar a ${nombre}?`)) return;
+  
+  const res = await api('bajaJugador', { jugadorId });
+  if (res.ok) {
+    toast('Jugador eliminado', 'success');
+    cargarJugadoresAdmin();
+  } else {
+    toast(res.msg || 'Error al eliminar', 'error');
+  }
+}
+
+// Modal Alta Admin
+function abrirModalAltaAdmin() {
+  const select = document.getElementById('alta-admin-equipo');
+  select.innerHTML = '<option value="">Seleccionar...</option>';
+  STATE.equipos.forEach(eq => {
+    select.innerHTML += `<option value="${eq.id}">${eq.nombre}</option>`;
+  });
+  
+  document.getElementById('form-alta-admin').reset();
+  document.getElementById('modal-alta-admin').classList.add('active');
+}
+
+async function altaJugadorAdmin(e) {
+  e.preventDefault();
+  
+  const res = await api('altaJugadorAdmin', {
+    equipoId: document.getElementById('alta-admin-equipo').value,
+    nombre: document.getElementById('alta-admin-nombre').value,
+    dni: document.getElementById('alta-admin-dni').value,
+    fechaNac: document.getElementById('alta-admin-fechanac').value,
+    tipoCuota: document.getElementById('alta-admin-tipocuota').value
+  });
+  
+  if (res.ok) {
+    toast('Jugador agregado', 'success');
+    cerrarModal('modal-alta-admin');
+    cargarJugadoresAdmin();
+  } else {
+    toast(res.msg || 'Error al agregar', 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════════════
+function cerrarModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+function toast(msg, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.innerHTML = `
+    <span class="toast-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span>
+    <span class="toast-message">${msg}</span>
+    <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+  `;
+  container.appendChild(toast);
+  
+  setTimeout(() => toast.remove(), 5000);
+}
+
+// Cerrar modales con Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+  }
+});
+
+// Cerrar modal al hacer clic fuera
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('active');
+  });
+});
+</script>
+
+</body>
+</html>
