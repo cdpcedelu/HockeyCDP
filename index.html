@@ -704,7 +704,7 @@ tr:hover td { background: var(--gray-50); }
     <form id="login-form" onsubmit="return handleLogin(event)">
       <div id="equipo-group" class="form-group">
         <label>Equipo</label>
-        <select id="login-equipo" required>
+        <select id="login-equipo">
           <option value="">Seleccionar equipo...</option>
         </select>
       </div>
@@ -1343,6 +1343,16 @@ async function handleLogin(e) {
     if (loginMode === 'delegado') {
       const equipoId = document.getElementById('login-equipo').value;
       const pin = document.getElementById('login-pin').value;
+      
+      // Validar que seleccionó equipo
+      if (!equipoId) {
+        errorDiv.textContent = 'Seleccioná un equipo';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Ingresar';
+        return;
+      }
+      
       showLoading('Verificando credenciales...');
       res = await api('login', { equipoId, pin });
       
