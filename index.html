@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v1.4 — 2025-04-09 22:15 ARG -->
+<!-- PAGOS HOCKEY CDP — Frontend v1.5 — 2025-04-09 22:30 ARG -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -850,21 +850,21 @@ tr:hover td { background: var(--gray-50); }
 /* MEJORAS MOBILE */
 /* ══════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
-  html { font-size: 17px; }
+  html { font-size: 18px; }
   
   .header h1 { font-size: 1.2rem; }
-  .header .emoji { font-size: 1.4rem; }
-  .admin-badge { font-size: 0.72rem; padding: 4px 10px; }
+  .header .emoji { font-size: 1.5rem; }
+  .admin-badge { font-size: 0.75rem; padding: 4px 10px; }
   
   .nav-tabs { gap: 4px; }
   .nav-tab { 
-    padding: 10px 12px; 
-    font-size: 0.85rem; 
+    padding: 12px 14px; 
+    font-size: 0.9rem; 
     border-radius: 10px;
   }
   
   .card { 
-    padding: 14px; 
+    padding: 16px; 
     border-radius: 12px;
     margin-bottom: 12px;
   }
@@ -873,37 +873,42 @@ tr:hover td { background: var(--gray-50); }
     grid-template-columns: 1fr 1fr; 
     gap: 10px;
   }
-  .stat-card { padding: 14px; }
-  .stat-number { font-size: 1.8rem; }
-  .stat-label { font-size: 0.8rem; }
+  .stat-card { padding: 16px; }
+  .stat-number { font-size: 2rem; }
+  .stat-label { font-size: 0.85rem; }
   
   .jugador-card {
-    padding: 12px;
+    padding: 14px;
   }
-  .jugador-nombre { font-size: 1rem; }
-  .jugador-meta { font-size: 0.8rem; }
+  .jugador-nombre { font-size: 1.05rem; }
+  .jugador-meta { font-size: 0.85rem; }
   
-  table { font-size: 0.85rem; }
-  th, td { padding: 8px 10px; }
+  /* Tablas responsive - ocultar columnas menos importantes */
+  table { font-size: 0.9rem; }
+  th, td { padding: 10px 8px; }
+  
+  /* Ocultar columnas en mobile */
+  .hide-mobile { display: none !important; }
   
   .btn { 
-    padding: 8px 12px; 
-    font-size: 0.85rem;
+    padding: 10px 14px; 
+    font-size: 0.9rem;
     border-radius: 8px;
   }
-  .btn-sm { padding: 6px 10px; font-size: 0.8rem; }
+  .btn-sm { padding: 8px 12px; font-size: 0.85rem; }
   
   .modal { 
     padding: 20px; 
     margin: 12px;
     border-radius: 16px;
   }
-  .modal-title { font-size: 1.2rem; }
+  .modal-title { font-size: 1.3rem; }
   
   .toast { 
     min-width: auto; 
     margin: 0 12px;
-    padding: 12px 16px;
+    padding: 14px 18px;
+    font-size: 0.95rem;
   }
   .toast-container { 
     right: 0; 
@@ -913,26 +918,56 @@ tr:hover td { background: var(--gray-50); }
   
   .filtros { gap: 8px; }
   .filtro-chip { 
-    padding: 6px 12px; 
-    font-size: 0.85rem;
+    padding: 8px 14px; 
+    font-size: 0.9rem;
     border-radius: 16px;
   }
   
   .mes-selector select {
-    padding: 8px 12px;
-    font-size: 0.85rem;
+    padding: 10px 14px;
+    font-size: 0.95rem;
   }
   
   .login-card {
-    padding: 28px 20px;
+    padding: 32px 24px;
     border-radius: 20px;
   }
-  .login-card h1 { font-size: 1.6rem; }
-  .login-card .subtitle { font-size: 0.9rem; }
+  .login-card h1 { font-size: 1.8rem; }
+  .login-card .subtitle { font-size: 1rem; }
   
   .footer-content { gap: 12px; }
-  .footer-credit { font-size: 0.75rem; }
-  .btn-whatsapp { padding: 6px 14px; font-size: 0.75rem; }
+  .footer-credit { font-size: 0.85rem; }
+  .btn-whatsapp { padding: 8px 16px; font-size: 0.85rem; }
+  
+  /* Cards de comprobantes en mobile */
+  .comprobante-card-mobile {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .comprobante-card-mobile .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .comprobante-card-mobile .card-nombre {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--gray-800);
+  }
+  .comprobante-card-mobile .card-meta {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    margin-top: 2px;
+  }
+  .comprobante-card-mobile .card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
 }
 </style>
 </head>
@@ -2244,21 +2279,43 @@ function renderResumenAdmin() {
   tbody.innerHTML = '';
   
   const pagos = STATE.pagosPendientesAdmin || [];
+  const esMobile = window.innerWidth < 640;
   
   pagos.forEach(p => {
-    tbody.innerHTML += `
-      <tr>
-        <td class="jugador-nombre">${p.nombre}</td>
-        <td>${(p.equipoId||'').replace(/_/g,' ')}</td>
-        <td>${p.mes}</td>
-        <td>${p.fechaCarga || '—'}</td>
-        <td class="btn-actions">
-          <button class="btn btn-sm btn-sky" onclick='abrirModalVer("${p.id}", ${JSON.stringify(p).replace(/'/g, "\\'")})'>👁️ Ver</button>
-          <button class="btn btn-sm btn-success" onclick="aprobarPago('${p.id}')">✓</button>
-          <button class="btn btn-sm btn-danger" onclick="abrirModalRechazar('${p.id}','${(p.nombre||'').replace(/'/g,"\\'")}','${p.mes}','${p.equipoId}')">✕</button>
-        </td>
-      </tr>
+    const acciones = `
+      <button class="btn btn-sm btn-sky" onclick='abrirModalVer("${p.id}", ${JSON.stringify(p).replace(/'/g, "\\'")})'>👁️</button>
+      <button class="btn btn-sm btn-success" onclick="aprobarPago('${p.id}')">✓</button>
+      <button class="btn btn-sm btn-danger" onclick="abrirModalRechazar('${p.id}','${(p.nombre||'').replace(/'/g,"\\'")}','${p.mes}','${p.equipoId}')">✕</button>
     `;
+    
+    if (esMobile) {
+      tbody.innerHTML += `
+        <tr>
+          <td colspan="5" style="padding:0;border:none;">
+            <div class="comprobante-card-mobile">
+              <div class="card-header">
+                <div>
+                  <div class="card-nombre">${p.nombre}</div>
+                  <div class="card-meta">${(p.equipoId||'').replace(/_/g,' ')} · ${p.mes}</div>
+                </div>
+                <span class="estado-badge estado-pendiente">⏳</span>
+              </div>
+              <div class="card-actions">${acciones}</div>
+            </div>
+          </td>
+        </tr>
+      `;
+    } else {
+      tbody.innerHTML += `
+        <tr>
+          <td class="jugador-nombre">${p.nombre}</td>
+          <td>${(p.equipoId||'').replace(/_/g,' ')}</td>
+          <td>${p.mes}</td>
+          <td>${p.fechaCarga || '—'}</td>
+          <td class="btn-actions">${acciones}</td>
+        </tr>
+      `;
+    }
   });
   
   if (pagos.length === 0) {
@@ -2334,16 +2391,15 @@ function renderComprobantesAdmin() {
   const filtro = STATE.filtroComprobantes;
   const pagos = filtro === 'todos' ? STATE.todosLosPagos : STATE.todosLosPagos.filter(p => p.estado === filtro);
   
+  const esMobile = window.innerWidth < 640;
+  
   pagos.forEach(p => {
     let estadoHTML;
     if (p.estado === 'Pendiente') estadoHTML = '<span class="estado-badge estado-pendiente">⏳ Pendiente</span>';
     else if (p.estado === 'Aprobado') estadoHTML = '<span class="estado-badge estado-aprobado">✓ Aprobado</span>';
     else estadoHTML = '<span class="estado-badge estado-rechazado">✕ Rechazado</span>';
     
-    // Escapar datos para onclick
-    const pagoData = JSON.stringify(p).replace(/'/g, "\\'").replace(/"/g, "&quot;");
-    
-    let acciones = `<button class="btn btn-sm btn-sky" onclick='abrirModalVer("${p.id}", ${JSON.stringify(p).replace(/'/g, "\\'")})'}>👁️ Ver</button>`;
+    let acciones = `<button class="btn btn-sm btn-sky" onclick='abrirModalVer("${p.id}", ${JSON.stringify(p).replace(/'/g, "\\'")})'>👁️</button>`;
     if (p.estado === 'Pendiente') {
       acciones += `
         <button class="btn btn-sm btn-success" onclick="aprobarPago('${p.id}')">✓</button>
@@ -2351,17 +2407,38 @@ function renderComprobantesAdmin() {
       `;
     }
     
-    tbody.innerHTML += `
-      <tr>
-        <td>#${p.id}</td>
-        <td class="jugador-nombre">${p.nombre}</td>
-        <td>${(p.equipoId||'').replace(/_/g,' ')}</td>
-        <td>${p.mes}</td>
-        <td>${estadoHTML}</td>
-        <td>${p.fechaCarga || '—'}</td>
-        <td class="btn-actions">${acciones}</td>
-      </tr>
-    `;
+    if (esMobile) {
+      // Vista de cards para mobile
+      tbody.innerHTML += `
+        <tr>
+          <td colspan="7" style="padding:0;border:none;">
+            <div class="comprobante-card-mobile">
+              <div class="card-header">
+                <div>
+                  <div class="card-nombre">${p.nombre}</div>
+                  <div class="card-meta">${(p.equipoId||'').replace(/_/g,' ')} · ${p.mes}</div>
+                </div>
+                ${estadoHTML}
+              </div>
+              <div class="card-actions">${acciones}</div>
+            </div>
+          </td>
+        </tr>
+      `;
+    } else {
+      // Vista de tabla para desktop
+      tbody.innerHTML += `
+        <tr>
+          <td>#${p.id}</td>
+          <td class="jugador-nombre">${p.nombre}</td>
+          <td>${(p.equipoId||'').replace(/_/g,' ')}</td>
+          <td>${p.mes}</td>
+          <td>${estadoHTML}</td>
+          <td>${p.fechaCarga || '—'}</td>
+          <td class="btn-actions">${acciones}</td>
+        </tr>
+      `;
+    }
   });
   
   if (pagos.length === 0) {
