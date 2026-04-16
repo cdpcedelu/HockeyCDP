@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v1.9 — 2025-04-10 00:10 ARG -->
+<!-- PAGOS HOCKEY CDP — Frontend v2.0 — 2025-04-15 20:55 ARG -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1034,6 +1034,11 @@ tr:hover td { background: var(--gray-50); }
     font-size: 0.95rem;
   }
   
+  /* Config - grids en mobile */
+  #tab-config .card div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+  
   .login-card {
     padding: 32px 24px;
     border-radius: 20px;
@@ -1464,27 +1469,109 @@ tr:hover td { background: var(--gray-50); }
     <div id="tab-config" class="tab-content">
       <div class="card">
         <div class="card-title">
-          <span class="icon">⚙️</span>
-          Configuración de Cuotas
+          <span class="icon">💰</span>
+          Cuota Social (igual para todos)
         </div>
-        <form id="form-config" onsubmit="return guardarConfig(event)">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
-            <div class="form-group">
-              <label>Cuota Normal</label>
-              <input type="number" id="config-cuota-normal" placeholder="15000">
-            </div>
-            <div class="form-group">
-              <label>Cuota Fuera CDU</label>
-              <input type="number" id="config-cuota-fuera" placeholder="8000">
-            </div>
-            <div class="form-group">
-              <label>Cuota Bonificado</label>
-              <input type="number" id="config-cuota-bonif" placeholder="0">
-            </div>
-          </div>
-          <button type="submit" class="btn btn-mint">Guardar Cambios</button>
-        </form>
+        <div class="form-group">
+          <label>Cuota Social</label>
+          <input type="number" id="config-social" placeholder="16000">
+        </div>
       </div>
+      
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">🏑</span>
+          Superior (Damas / Caballeros / Master)
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label>Deportiva</label>
+            <input type="number" id="config-deportiva-superior" placeholder="20000">
+          </div>
+          <div class="form-group">
+            <label>Completa</label>
+            <input type="number" id="config-completa-superior" placeholder="36000">
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">👶</span>
+          Infantiles
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label>Deportiva</label>
+            <input type="number" id="config-deportiva-infantiles" placeholder="15000">
+          </div>
+          <div class="form-group">
+            <label>Completa</label>
+            <input type="number" id="config-completa-infantiles" placeholder="31000">
+          </div>
+          <div class="form-group">
+            <label>Hijo de Socio</label>
+            <input type="number" id="config-hijo-infantiles" placeholder="15000">
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">🧒</span>
+          Sub 8 / Sub 12
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label>Deportiva</label>
+            <input type="number" id="config-deportiva-sub8-12" placeholder="10000">
+          </div>
+          <div class="form-group">
+            <label>Completa</label>
+            <input type="number" id="config-completa-sub8-12" placeholder="26000">
+          </div>
+          <div class="form-group">
+            <label>Hijo de Socio</label>
+            <input type="number" id="config-hijo-sub8-12" placeholder="10000">
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">🏃</span>
+          Sub 14 / Sub 16
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label>Deportiva</label>
+            <input type="number" id="config-deportiva-sub14-16" placeholder="14000">
+          </div>
+          <div class="form-group">
+            <label>Completa</label>
+            <input type="number" id="config-completa-sub14-16" placeholder="30000">
+          </div>
+          <div class="form-group">
+            <label>Hijo de Socio</label>
+            <input type="number" id="config-hijo-sub14-16" placeholder="14000">
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">🎁</span>
+          Bonificado / Becado
+        </div>
+        <div class="form-group">
+          <label>Cuota Bonificado</label>
+          <input type="number" id="config-bonificado" placeholder="0">
+        </div>
+      </div>
+      
+      <button class="btn btn-mint" onclick="guardarConfig()" style="width:100%;margin-top:8px;">
+        💾 Guardar Configuración
+      </button>
     </div>
   </main>
   
@@ -2765,24 +2852,64 @@ function renderConfig() {
     return;
   }
   
-  document.getElementById('config-cuota-normal').value = STATE.parametros.CUOTA_NORMAL || '';
-  document.getElementById('config-cuota-fuera').value = STATE.parametros.CUOTA_FUERA_CDU || '';
-  document.getElementById('config-cuota-bonif').value = STATE.parametros.CUOTA_BONIFICADO || '';
+  const p = STATE.parametros;
+  
+  // Social
+  document.getElementById('config-social').value = p.CUOTA_SOCIAL || '16000';
+  
+  // Superior
+  document.getElementById('config-deportiva-superior').value = p.CUOTA_DEPORTIVA_SUPERIOR || '20000';
+  document.getElementById('config-completa-superior').value = p.CUOTA_COMPLETA_SUPERIOR || '36000';
+  
+  // Infantiles
+  document.getElementById('config-deportiva-infantiles').value = p.CUOTA_DEPORTIVA_INFANTILES || '15000';
+  document.getElementById('config-completa-infantiles').value = p.CUOTA_COMPLETA_INFANTILES || '31000';
+  document.getElementById('config-hijo-infantiles').value = p.CUOTA_HIJO_SOCIO_INFANTILES || '15000';
+  
+  // Sub 8/12
+  document.getElementById('config-deportiva-sub8-12').value = p.CUOTA_DEPORTIVA_SUB8_12 || '10000';
+  document.getElementById('config-completa-sub8-12').value = p.CUOTA_COMPLETA_SUB8_12 || '26000';
+  document.getElementById('config-hijo-sub8-12').value = p.CUOTA_HIJO_SOCIO_SUB8_12 || '10000';
+  
+  // Sub 14/16
+  document.getElementById('config-deportiva-sub14-16').value = p.CUOTA_DEPORTIVA_SUB14_16 || '14000';
+  document.getElementById('config-completa-sub14-16').value = p.CUOTA_COMPLETA_SUB14_16 || '30000';
+  document.getElementById('config-hijo-sub14-16').value = p.CUOTA_HIJO_SOCIO_SUB14_16 || '14000';
+  
+  // Bonificado
+  document.getElementById('config-bonificado').value = p.CUOTA_BONIFICADO || '0';
 }
 
-async function guardarConfig(e) {
-  e.preventDefault();
-  
+async function guardarConfig() {
   showLoading('Guardando configuración...');
-  const res = await api('setParametros', {
-    CUOTA_NORMAL: document.getElementById('config-cuota-normal').value,
-    CUOTA_FUERA_CDU: document.getElementById('config-cuota-fuera').value,
-    CUOTA_BONIFICADO: document.getElementById('config-cuota-bonif').value
-  });
+  
+  const params = {
+    CUOTA_SOCIAL: document.getElementById('config-social').value,
+    
+    CUOTA_DEPORTIVA_SUPERIOR: document.getElementById('config-deportiva-superior').value,
+    CUOTA_COMPLETA_SUPERIOR: document.getElementById('config-completa-superior').value,
+    
+    CUOTA_DEPORTIVA_INFANTILES: document.getElementById('config-deportiva-infantiles').value,
+    CUOTA_COMPLETA_INFANTILES: document.getElementById('config-completa-infantiles').value,
+    CUOTA_HIJO_SOCIO_INFANTILES: document.getElementById('config-hijo-infantiles').value,
+    
+    CUOTA_DEPORTIVA_SUB8_12: document.getElementById('config-deportiva-sub8-12').value,
+    CUOTA_COMPLETA_SUB8_12: document.getElementById('config-completa-sub8-12').value,
+    CUOTA_HIJO_SOCIO_SUB8_12: document.getElementById('config-hijo-sub8-12').value,
+    
+    CUOTA_DEPORTIVA_SUB14_16: document.getElementById('config-deportiva-sub14-16').value,
+    CUOTA_COMPLETA_SUB14_16: document.getElementById('config-completa-sub14-16').value,
+    CUOTA_HIJO_SOCIO_SUB14_16: document.getElementById('config-hijo-sub14-16').value,
+    
+    CUOTA_BONIFICADO: document.getElementById('config-bonificado').value
+  };
+  
+  const res = await api('setParametros', params);
   hideLoading();
   
   if (res.ok) {
     toast('✅ Configuración guardada', 'success');
+    STATE.parametros = { ...STATE.parametros, ...params };
   } else {
     toast(res.msg || 'Error al guardar', 'error');
   }
