@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v2.2 — 2026-05-05 15:10 ARG (+ meta tags Open Graph + Twitter Card + favicons PWA + manifest para dominio hockey.cdpcdelu.ar) -->
+<!-- PAGOS HOCKEY CDP — Frontend v2.3 — 2026-06-12 12:05 ARG (PERF: panel admin carga con 1 sola llamada getDashboardAdmin en vez de 2 en serie) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -2483,19 +2483,14 @@ function fileToBase64(file) {
 // ══════════════════════════════════════════════════════════════════
 async function cargarResumenAdmin() {
   showLoading('Cargando resumen...');
-  const res = await api('getResumen');
+  // 1 sola llamada: resumen + pagos pendientes (antes eran 2 en serie)
+  const res = await api('getDashboardAdmin');
+  hideLoading();
   if (res.ok) {
     STATE.resumen = res.resumen;
+    STATE.pagosPendientesAdmin = res.pagosPendientes || [];
     STATE.cache.resumen = Date.now();
   }
-  
-  // Cargar pagos pendientes
-  const pagosRes = await api('getAllPagos', { estado: 'Pendiente' });
-  hideLoading();
-  if (pagosRes.ok) {
-    STATE.pagosPendientesAdmin = pagosRes.pagos;
-  }
-  
   renderResumenAdmin();
 }
 
