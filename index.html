@@ -1,15 +1,11 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v2.3 — 2026-06-12 12:05 ARG (PERF: panel admin carga con 1 sola llamada getDashboardAdmin en vez de 2 en serie) -->
+<!-- PAGOS HOCKEY CDP — Frontend v2.6 — 2026-06-12 13:10 ARG (FIX raiz "Cargando resumen" clavado: try/finally en cargarResumenAdmin + timeout y manejo no-JSON en api(); sin PWA. Se removio el intento previo de Service Worker: no existia worker, la causa era la sesion guardada en localStorage que auto-entraba y se colgaba si la llamada rompia) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#56c596">
 <meta name="description" content="Sistema de pagos de hockey del Club de Profesionales">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Hockey CDP">
 
 <title>Hockey CDP</title>
 
@@ -36,8 +32,7 @@
 <meta name="twitter:description" content="Sistema de pagos de hockey del Club de Profesionales">
 <meta name="twitter:image"       content="https://hockey.cdpcdelu.ar/preview.png">
 
-<!-- PWA Manifest -->
-<link rel="manifest" href="manifest.json">
+<!-- Sin PWA: manifest y Service Worker removidos a proposito (app web normal) -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1872,15 +1867,38 @@ async function api(accion, params = {}, loadingMsg = null) {
     for (const key in params) {
       url.searchParams.set(key, params[key]);
     }
-    
-    const res = await fetch(url.toString());
-    const data = await res.json();
-    
+
+    // Timeout: si la llamada se cuelga, la abortamos a los 20s (evita girar infinito)
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20000);
+
+    let data;
+    try {
+      const res = await fetch(url.toString(), { signal: ctrl.signal });
+      const txt = await res.text();
+      try {
+        data = JSON.parse(txt);   // respuesta normal de Apps Script
+      } catch (parseErr) {
+        // La respuesta no es JSON (p.ej. página de error/login de Google):
+        // no rompemos, devolvemos un error manejable.
+        data = { ok: false, error: 'BAD_RESPONSE', msg: 'Respuesta inválida del servidor.' };
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+
+    // Token vencido/ausente: redirigir al login en vez de quedar cargando
+    if (data && (data.error === 'TOKEN_EXPIRED' || data.error === 'NO_TOKEN') && STATE.token) {
+      sesionExpirada();
+    }
+
     if (loadingMsg) hideLoading();
     return data;
   } catch(e) {
     if (loadingMsg) hideLoading();
-    throw e;
+    // Timeout o caída de red: devolvemos error manejable en vez de tirar excepción
+    const msg = (e && e.name === 'AbortError') ? 'La conexión tardó demasiado.' : 'Error de conexión.';
+    return { ok: false, error: 'NETWORK', msg: msg };
   }
 }
 
@@ -2031,6 +2049,18 @@ function clearSession() {
   localStorage.removeItem('hockey_rol');
   localStorage.removeItem('hockey_equipo');
   localStorage.removeItem('hockey_nombreAdmin');
+}
+
+// Sesión vencida / token inválido: limpiar y volver al login (evita quedar clavado)
+var _sesionExpiradaAvisada = false;
+function sesionExpirada() {
+  if (_sesionExpiradaAvisada) return;   // evita avisos/redirects repetidos
+  _sesionExpiradaAvisada = true;
+  hideLoading();
+  clearSession();
+  showLogin();
+  try { toast('Tu sesión expiró. Ingresá de nuevo.', 'error'); } catch(e) {}
+  setTimeout(function(){ _sesionExpiradaAvisada = false; }, 3000);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2482,22 +2512,37 @@ function fileToBase64(file) {
 // ADMIN
 // ══════════════════════════════════════════════════════════════════
 async function cargarResumenAdmin() {
+  if (STATE._cargandoResumen) return;        // cerrojo: evita llamadas superpuestas / loop
+  STATE._cargandoResumen = true;
   showLoading('Cargando resumen...');
-  // 1 sola llamada: resumen + pagos pendientes (antes eran 2 en serie)
-  const res = await api('getDashboardAdmin');
-  hideLoading();
-  if (res.ok) {
-    STATE.resumen = res.resumen;
-    STATE.pagosPendientesAdmin = res.pagosPendientes || [];
-    STATE.cache.resumen = Date.now();
+  try {
+    // 1 sola llamada: resumen + pagos pendientes (antes eran 2 en serie)
+    const res = await api('getDashboardAdmin');
+    if (res.ok) {
+      STATE.resumen = res.resumen;
+      STATE.pagosPendientesAdmin = res.pagosPendientes || [];
+      STATE.cache.resumen = Date.now();
+      renderResumenAdmin();
+    } else if (res.error !== 'TOKEN_EXPIRED' && res.error !== 'NO_TOKEN') {
+      // si fue token vencido, api() ya redirigió al login; otro error -> avisar sin clavar
+      toast(res.msg || 'No se pudo cargar el resumen', 'error');
+    }
+  } catch (e) {
+    // Si la llamada rompe (red colgada, respuesta no-JSON, etc.) NO dejamos
+    // la pantalla clavada: avisamos y mostramos el panel igual.
+    console.error('cargarResumenAdmin:', e);
+    toast('No se pudo conectar. Reintentá en unos segundos.', 'error');
+  } finally {
+    // SIEMPRE se ejecuta, pase lo que pase: nunca queda en "Cargando resumen".
+    hideLoading();
+    STATE._cargandoResumen = false;
   }
-  renderResumenAdmin();
 }
 
 function renderResumenAdmin() {
-  // Si no hay datos, cargar
+  // Si no hay datos, cargar (sin reentrar si ya hay una carga en curso)
   if (!STATE.resumen) {
-    cargarResumenAdmin();
+    if (!STATE._cargandoResumen) cargarResumenAdmin();
     return;
   }
   
