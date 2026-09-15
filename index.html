@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v2.6 — 2026-06-12 13:10 ARG (FIX raiz "Cargando resumen" clavado: try/finally en cargarResumenAdmin + timeout y manejo no-JSON en api(); sin PWA. Se removio el intento previo de Service Worker: no existia worker, la causa era la sesion guardada en localStorage que auto-entraba y se colgaba si la llamada rompia) -->
+<!-- PAGOS HOCKEY CDP — Frontend v2.7 — 2026-06-19 12:40 ARG (ABM: baja logica + seccion Bajas + reactivar; editar jugador precargado con equipo/categoria/obs; observaciones por jugador; obs del pago del delegado al subir y del admin al aprobar/rechazar) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1215,6 +1215,7 @@ tr:hover td { background: var(--gray-50); }
     <button class="nav-tab" onclick="showTab('tab-estadisticas')">📈 Estadísticas</button>
     <button class="nav-tab" onclick="showTab('tab-comprobantes')">💳 Comprobantes</button>
     <button class="nav-tab" onclick="showTab('tab-jugadores')">👥 Jugadores</button>
+    <button class="nav-tab" onclick="showTab('tab-bajas')">🚫 Bajas</button>
     <button class="nav-tab" onclick="showTab('tab-solicitudes')">📋 Solicitudes</button>
     <button class="nav-tab" onclick="showTab('tab-config')">⚙️ Config</button>
   </nav>
@@ -1443,12 +1444,43 @@ tr:hover td { background: var(--gray-50); }
                 <th>ID</th>
                 <th>Nombre</th>
                 <th>Equipo</th>
+                <th>Categoría</th>
                 <th>DNI</th>
                 <th>Tipo Cuota</th>
+                <th>Obs.</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="tabla-jugadores-admin"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- TAB: BAJAS (Admin) -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="tab-bajas" class="tab-content">
+      <div class="mes-selector">
+        <label>Equipo:</label>
+        <select id="filtro-equipo-bajas" onchange="cargarBajasAdmin()">
+          <option value="">Todos los equipos</option>
+        </select>
+      </div>
+      <div class="card">
+        <div class="tabla-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Equipo</th>
+                <th>Categoría</th>
+                <th>Fecha baja</th>
+                <th>Motivo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-bajas-admin"></tbody>
           </table>
         </div>
       </div>
@@ -1639,7 +1671,12 @@ tr:hover td { background: var(--gray-50); }
         </div>
       </div>
       <input type="file" id="file-input" accept="image/*,.pdf" style="display:none;" onchange="handleFileSelect(event)">
-      
+
+      <div class="form-group" style="margin-top:16px;">
+        <label>Observaciones (opcional)</label>
+        <textarea id="cargar-obs" rows="2" placeholder="Ej: pago 2 cuotas juntas, pagó de más..."></textarea>
+      </div>
+
       <input type="hidden" id="cargar-jugador-id">
       <input type="hidden" id="cargar-mes">
     </div>
@@ -1746,11 +1783,114 @@ tr:hover td { background: var(--gray-50); }
             <option value="AYUD TEC (BONIF)">Ayudante Técnico (Bonificado)</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Categoría (para juveniles/infantiles)</label>
+          <select id="alta-admin-categoria">
+            <option value="">— Sin categoría —</option>
+            <option value="INFANTILES">Infantiles</option>
+            <option value="SUB 8">Sub 8</option>
+            <option value="SUB 10">Sub 10</option>
+            <option value="SUB 12">Sub 12</option>
+            <option value="SUB 14">Sub 14</option>
+            <option value="SUB 16">Sub 16</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Observaciones</label>
+          <textarea id="alta-admin-obs" rows="2" placeholder="Aclaraciones (opcional)"></textarea>
+        </div>
       </form>
     </div>
     <div class="modal-footer">
       <button class="btn btn-gray" onclick="cerrarModal('modal-alta-admin')">Cancelar</button>
       <button class="btn btn-lavender" onclick="document.getElementById('form-alta-admin').requestSubmit()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar Jugador -->
+<div id="modal-edit-jugador" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Editar Jugador</h2>
+      <button class="modal-close" onclick="cerrarModal('modal-edit-jugador')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-jugador-id">
+      <div class="form-group">
+        <label>Equipo</label>
+        <select id="edit-equipo" required></select>
+      </div>
+      <div class="form-group">
+        <label>Nombre Completo</label>
+        <input type="text" id="edit-nombre" placeholder="APELLIDO NOMBRE" required>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="form-group">
+          <label>DNI</label>
+          <input type="text" id="edit-dni" placeholder="12345678">
+        </div>
+        <div class="form-group">
+          <label>Fecha Nacimiento</label>
+          <input type="date" id="edit-fechanac">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Tipo de Cuota</label>
+        <select id="edit-tipocuota">
+          <option value="NORMAL">Normal</option>
+          <option value="DEPORTIVA (VIVE FUERA CDU)">Deportiva (Vive fuera CDU)</option>
+          <option value="SOCIAL (VIVE FUERA CDU)">Social (Vive fuera CDU)</option>
+          <option value="SOCIAL">Social</option>
+          <option value="BECA">Beca</option>
+          <option value="DT (BONIF)">DT (Bonificado)</option>
+          <option value="DELEGADO (BONIF)">Delegado (Bonificado)</option>
+          <option value="MONITOR (BONIF)">Monitor (Bonificado)</option>
+          <option value="AYUD TEC (BONIF)">Ayudante Técnico (Bonificado)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Categoría</label>
+        <select id="edit-categoria">
+          <option value="">— Sin categoría —</option>
+          <option value="INFANTILES">Infantiles</option>
+          <option value="SUB 8">Sub 8</option>
+          <option value="SUB 10">Sub 10</option>
+          <option value="SUB 12">Sub 12</option>
+          <option value="SUB 14">Sub 14</option>
+          <option value="SUB 16">Sub 16</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Observaciones</label>
+        <textarea id="edit-obs" rows="3" placeholder="Paga de más/menos, cuotas juntas, etc."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="cerrarModal('modal-edit-jugador')">Cancelar</button>
+      <button class="btn btn-mint" onclick="guardarEdicionJugador()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Dar de Baja -->
+<div id="modal-baja-jugador" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Dar de baja</h2>
+      <button class="modal-close" onclick="cerrarModal('modal-baja-jugador')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="baja-jugador-id">
+      <p style="margin-bottom:12px;">Vas a dar de baja a <strong id="baja-jugador-nombre"></strong>. Queda en la sección <em>Bajas</em> y se puede reactivar después.</p>
+      <div class="form-group">
+        <label>Motivo (opcional)</label>
+        <textarea id="baja-motivo" rows="3" placeholder="Ej: dejó el club, cambió de ciudad..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="cerrarModal('modal-baja-jugador')">Cancelar</button>
+      <button class="btn btn-peach" onclick="confirmarBaja()">Dar de baja</button>
     </div>
   </div>
 </div>
@@ -2126,6 +2266,7 @@ function showTab(tabId) {
   if (tabId === 'tab-estadisticas') renderEstadisticas();
   if (tabId === 'tab-comprobantes') renderComprobantesAdmin();
   if (tabId === 'tab-jugadores') renderJugadoresAdmin();
+  if (tabId === 'tab-bajas') renderBajasAdmin();
   if (tabId === 'tab-solicitudes') renderSolicitudesAdmin();
   if (tabId === 'tab-config') renderConfig();
 }
@@ -2363,6 +2504,7 @@ function abrirCargarPara(jugadorId, nombreJugador, mes) {
   document.getElementById('cargar-mes').value = mes;
   document.getElementById('cargar-nombre-jugador').textContent = nombreJugador;
   document.getElementById('cargar-mes-display').textContent = mes;
+  var obsEl = document.getElementById('cargar-obs'); if (obsEl) obsEl.value = '';
   limpiarArchivo();
   document.getElementById('modal-cargar').classList.add('active');
   
@@ -2475,7 +2617,8 @@ async function enviarComprobante() {
       mes, 
       archivo: base64,
       nombreArchivo: archivoSeleccionado.name,
-      tipoArchivo: archivoSeleccionado.type
+      tipoArchivo: archivoSeleccionado.type,
+      obs: (document.getElementById('cargar-obs')?.value || '')
     });
     
     hideLoading();
@@ -2719,6 +2862,8 @@ function renderComprobantesAdmin() {
               <div class="card-nombre">${p.nombre}</div>
               <div class="card-meta">${(p.equipoId||'').replace(/_/g,' ')} · ${p.mes}</div>
               ${p.fechaCarga ? `<div class="card-fecha">📅 ${p.fechaCarga}</div>` : ''}
+              ${p.obsCarga ? `<div class="card-fecha">📝 ${p.obsCarga}</div>` : ''}
+              ${p.obs ? `<div class="card-fecha">🛡️ ${p.obs}</div>` : ''}
             </div>
             <span class="estado-badge ${estadoClass}">${estadoText}</span>
           </div>
@@ -2767,7 +2912,7 @@ function renderComprobantesAdmin() {
       html += `
         <tr>
           <td>#${p.id}</td>
-          <td class="jugador-nombre">${p.nombre}</td>
+          <td class="jugador-nombre">${p.nombre}${p.obsCarga ? `<br><small style="color:var(--gray-500)">📝 ${p.obsCarga}</small>` : ''}${p.obs ? `<br><small style="color:var(--gray-500)">🛡️ ${p.obs}</small>` : ''}</td>
           <td>${(p.equipoId||'').replace(/_/g,' ')}</td>
           <td>${p.mes}</td>
           <td>${estadoHTML}</td>
@@ -2796,7 +2941,7 @@ function filtrarComprobantes(filtro, btn) {
 async function cargarJugadoresAdmin() {
   showLoading('Cargando jugadores...');
   const equipoId = document.getElementById('filtro-equipo-jugadores')?.value || '';
-  const res = await api('getJugadoresAdmin', { equipoId });
+  const res = await api('getJugadoresAdmin', { equipoId, estado: 'Activo' });
   hideLoading();
   if (res.ok) {
     STATE.jugadoresAdmin = res.jugadores;
@@ -2825,23 +2970,29 @@ function renderJugadoresAdmin() {
   
   STATE.jugadoresAdmin.forEach(j => {
     const tipoBadgeClass = j.tipoCuota.includes('BONIF') || j.tipoCuota.includes('BECA') ? 'tipo-badge bonif' : 'tipo-badge';
-    
+    const obsIcon = (j.observaciones && j.observaciones.trim())
+      ? `<span title="${(j.observaciones||'').replace(/"/g,'&quot;')}" style="cursor:help;">📝</span>`
+      : '<span style="color:var(--gray-300)">—</span>';
+
     tbody.innerHTML += `
       <tr>
         <td>#${j.id}</td>
         <td class="jugador-nombre">${j.nombre}</td>
         <td>${j.equipoId}</td>
+        <td>${j.categoria || '-'}</td>
         <td>${j.dni || '-'}</td>
         <td><span class="${tipoBadgeClass}">${j.tipoCuota}</span></td>
+        <td style="text-align:center">${obsIcon}</td>
         <td class="btn-actions">
-          <button class="btn btn-sm btn-peach" onclick="eliminarJugador('${j.id}', '${j.nombre}')">🗑️</button>
+          <button class="btn btn-sm btn-lavender" onclick="abrirModalEdit('${j.id}')" title="Editar">✏️</button>
+          <button class="btn btn-sm btn-peach" onclick="abrirModalBaja('${j.id}','${(j.nombre||'').replace(/'/g,"\\'")}')" title="Dar de baja">🚫</button>
         </td>
       </tr>
     `;
   });
-  
+
   if (STATE.jugadoresAdmin.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">👥</div><h3>No hay jugadores</h3></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="icon">👥</div><h3>No hay jugadores</h3></td></tr>';
   }
 }
 
@@ -2983,8 +3134,10 @@ async function guardarConfig() {
 // ACCIONES ADMIN
 // ══════════════════════════════════════════════════════════════════
 async function aprobarPago(pagoId) {
+  const obs = prompt('Observación (opcional). Ej: pagó de más, cuotas juntas.\nDejar vacío si no hace falta:', '');
+  if (obs === null) return;   // canceló
   showLoading('Aprobando pago...');
-  const res = await api('aprobar', { pagoId });
+  const res = await api('aprobar', { pagoId, obs: obs.trim() });
   hideLoading();
   if (res.ok) {
     toast('✅ Pago aprobado', 'success');
@@ -3276,17 +3429,147 @@ async function rechazarSolicitud(solicitudId) {
   }
 }
 
-async function eliminarJugador(jugadorId, nombre) {
-  if (!confirm(`¿Eliminar a ${nombre}?`)) return;
-  
-  showLoading('Eliminando jugador...');
-  const res = await api('bajaJugador', { jugadorId });
+// ══════════════════════════════════════════════════════════════════
+// ABM JUGADORES — Editar / Baja lógica / Reactivar
+// ══════════════════════════════════════════════════════════════════
+
+// --- Editar ---
+function abrirModalEdit(jugadorId) {
+  const j = (STATE.jugadoresAdmin || []).find(x => String(x.id) === String(jugadorId));
+  if (!j) { toast('No se encontró el jugador', 'error'); return; }
+
+  // Llenar select de equipos y preseleccionar
+  const selEq = document.getElementById('edit-equipo');
+  selEq.innerHTML = '';
+  STATE.equipos.forEach(eq => {
+    selEq.innerHTML += `<option value="${eq.id}">${eq.nombre}</option>`;
+  });
+
+  document.getElementById('edit-jugador-id').value = j.id;
+  selEq.value = j.equipoId;
+  document.getElementById('edit-nombre').value = j.nombre || '';
+  document.getElementById('edit-dni').value = j.dni || '';
+  document.getElementById('edit-fechanac').value = j.fechaNac || '';
+  setSelectValue('edit-tipocuota', j.tipoCuota || 'NORMAL');
+  document.getElementById('edit-categoria').value = j.categoria || '';
+  document.getElementById('edit-obs').value = j.observaciones || '';
+
+  document.getElementById('modal-edit-jugador').classList.add('active');
+}
+
+// Si el tipo de cuota guardado no está entre las opciones, lo agrega para no perderlo
+function setSelectValue(id, val) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  const existe = Array.from(sel.options).some(o => o.value === val);
+  if (!existe && val) {
+    const o = document.createElement('option');
+    o.value = val; o.textContent = val;
+    sel.appendChild(o);
+  }
+  sel.value = val;
+}
+
+async function guardarEdicionJugador() {
+  const jugadorId = document.getElementById('edit-jugador-id').value;
+  const payload = {
+    jugadorId,
+    equipoId: document.getElementById('edit-equipo').value,
+    nombre: document.getElementById('edit-nombre').value,
+    dni: document.getElementById('edit-dni').value,
+    fechaNac: document.getElementById('edit-fechanac').value,
+    tipoCuota: document.getElementById('edit-tipocuota').value,
+    categoria: document.getElementById('edit-categoria').value,
+    observaciones: document.getElementById('edit-obs').value
+  };
+  showLoading('Guardando...');
+  const res = await api('editarJugador', payload);
   hideLoading();
   if (res.ok) {
-    toast('Jugador eliminado', 'success');
+    toast('✅ Cambios guardados', 'success');
+    cerrarModal('modal-edit-jugador');
     cargarJugadoresAdmin();
   } else {
-    toast(res.msg || 'Error al eliminar', 'error');
+    toast(res.msg || 'Error al guardar', 'error');
+  }
+}
+
+// --- Baja lógica ---
+function abrirModalBaja(jugadorId, nombre) {
+  document.getElementById('baja-jugador-id').value = jugadorId;
+  document.getElementById('baja-jugador-nombre').textContent = nombre || '';
+  document.getElementById('baja-motivo').value = '';
+  document.getElementById('modal-baja-jugador').classList.add('active');
+}
+
+async function confirmarBaja() {
+  const jugadorId = document.getElementById('baja-jugador-id').value;
+  const motivo = document.getElementById('baja-motivo').value;
+  showLoading('Dando de baja...');
+  const res = await api('bajaJugador', { jugadorId, motivo });
+  hideLoading();
+  if (res.ok) {
+    toast('Jugador dado de baja', 'success');
+    cerrarModal('modal-baja-jugador');
+    cargarJugadoresAdmin();
+    STATE.bajasAdmin = null;   // forzar recarga de la sección Bajas
+  } else {
+    toast(res.msg || 'Error al dar de baja', 'error');
+  }
+}
+
+// --- Sección Bajas ---
+async function cargarBajasAdmin() {
+  showLoading('Cargando bajas...');
+  const equipoId = document.getElementById('filtro-equipo-bajas')?.value || '';
+  const res = await api('getJugadoresAdmin', { equipoId, estado: 'Baja' });
+  hideLoading();
+  if (res.ok) STATE.bajasAdmin = res.jugadores;
+  renderBajasAdmin();
+}
+
+function renderBajasAdmin() {
+  const filtroEq = document.getElementById('filtro-equipo-bajas');
+  if (filtroEq && filtroEq.options.length <= 1) {
+    STATE.equipos.forEach(eq => {
+      filtroEq.innerHTML += `<option value="${eq.id}">${eq.nombre}</option>`;
+    });
+  }
+  if (!STATE.bajasAdmin) { cargarBajasAdmin(); return; }
+
+  const tbody = document.getElementById('tabla-bajas-admin');
+  tbody.innerHTML = '';
+  STATE.bajasAdmin.forEach(j => {
+    const motivo = j.motivoBaja ? j.motivoBaja : '<span style="color:var(--gray-400)">—</span>';
+    tbody.innerHTML += `
+      <tr>
+        <td class="jugador-nombre">${j.nombre}</td>
+        <td>${j.equipoId}</td>
+        <td>${j.categoria || '-'}</td>
+        <td>${j.fechaBaja || '-'}</td>
+        <td>${motivo}</td>
+        <td class="btn-actions">
+          <button class="btn btn-sm btn-mint" onclick="reactivarJugador('${j.id}','${(j.nombre||'').replace(/'/g,"\\'")}')" title="Reactivar">↩️ Reactivar</button>
+        </td>
+      </tr>
+    `;
+  });
+  if (STATE.bajasAdmin.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">🚫</div><h3>No hay bajas</h3></td></tr>';
+  }
+}
+
+async function reactivarJugador(jugadorId, nombre) {
+  if (!confirm(`¿Reactivar a ${nombre}?`)) return;
+  showLoading('Reactivando...');
+  const res = await api('reactivarJugador', { jugadorId });
+  hideLoading();
+  if (res.ok) {
+    toast('Jugador reactivado', 'success');
+    cargarBajasAdmin();
+    STATE.jugadoresAdmin = null;   // forzar recarga de Activos
+  } else {
+    toast(res.msg || 'Error al reactivar', 'error');
   }
 }
 
@@ -3311,7 +3594,9 @@ async function altaJugadorAdmin(e) {
     nombre: document.getElementById('alta-admin-nombre').value,
     dni: document.getElementById('alta-admin-dni').value,
     fechaNac: document.getElementById('alta-admin-fechanac').value,
-    tipoCuota: document.getElementById('alta-admin-tipocuota').value
+    tipoCuota: document.getElementById('alta-admin-tipocuota').value,
+    categoria: document.getElementById('alta-admin-categoria').value,
+    observaciones: document.getElementById('alta-admin-obs').value
   });
   hideLoading();
   
