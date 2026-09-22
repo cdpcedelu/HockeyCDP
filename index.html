@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v2.7 — 2026-06-19 12:40 ARG (ABM: baja logica + seccion Bajas + reactivar; editar jugador precargado con equipo/categoria/obs; observaciones por jugador; obs del pago del delegado al subir y del admin al aprobar/rechazar) -->
+<!-- PAGOS HOCKEY CDP — Frontend v2.8 — 2026-06-19 13:20 ARG (Categoria en Alta/Editar ahora es campo libre con sugerencias -datalist-: se puede elegir Caballeros/Master/Superior/juveniles o escribir cualquier otra) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1785,15 +1785,7 @@ tr:hover td { background: var(--gray-50); }
         </div>
         <div class="form-group">
           <label>Categoría (para juveniles/infantiles)</label>
-          <select id="alta-admin-categoria">
-            <option value="">— Sin categoría —</option>
-            <option value="INFANTILES">Infantiles</option>
-            <option value="SUB 8">Sub 8</option>
-            <option value="SUB 10">Sub 10</option>
-            <option value="SUB 12">Sub 12</option>
-            <option value="SUB 14">Sub 14</option>
-            <option value="SUB 16">Sub 16</option>
-          </select>
+          <input type="text" id="alta-admin-categoria" list="lista-categorias" placeholder="Elegí una o escribí la que quieras">
         </div>
         <div class="form-group">
           <label>Observaciones</label>
@@ -1851,15 +1843,18 @@ tr:hover td { background: var(--gray-50); }
       </div>
       <div class="form-group">
         <label>Categoría</label>
-        <select id="edit-categoria">
-          <option value="">— Sin categoría —</option>
-          <option value="INFANTILES">Infantiles</option>
-          <option value="SUB 8">Sub 8</option>
-          <option value="SUB 10">Sub 10</option>
-          <option value="SUB 12">Sub 12</option>
-          <option value="SUB 14">Sub 14</option>
-          <option value="SUB 16">Sub 16</option>
-        </select>
+        <input type="text" id="edit-categoria" list="lista-categorias" placeholder="Elegí una o escribí la que quieras">
+        <datalist id="lista-categorias">
+          <option value="Caballeros"></option>
+          <option value="Master"></option>
+          <option value="Superior Damas"></option>
+          <option value="INFANTILES"></option>
+          <option value="SUB 8"></option>
+          <option value="SUB 10"></option>
+          <option value="SUB 12"></option>
+          <option value="SUB 14"></option>
+          <option value="SUB 16"></option>
+        </datalist>
       </div>
       <div class="form-group">
         <label>Observaciones</label>
