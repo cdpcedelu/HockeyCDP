@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v2.10 — 2026-10-20 10:00 ARG (FIX PDF Listado: timeout 60s + reintento automatico y pantalla de error con reintentar, en vez de cortar por el limite de 20s; api() acepta timeout configurable) -->
+<!-- PAGOS HOCKEY CDP — Frontend v2.11 — 2026-10-20 10:30 ARG (UX: cargas del panel admin -resumen, estadisticas, comprobantes, jugadores, bajas- ahora NO bloquean: chip "Cargando" no bloqueante, se puede seguir navegando. Login/aprobar/subir siguen bloqueantes) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1991,6 +1991,25 @@ function hideLoading() {
   document.getElementById('loading-overlay').classList.remove('active');
 }
 
+// Indicador NO bloqueante: un chip arriba que deja seguir usando la app mientras carga.
+function showLoadingSoft(msg) {
+  let el = document.getElementById('soft-load');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'soft-load';
+    el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;' +
+      'background:rgba(40,85,164,.95);color:#fff;padding:8px 16px;border-radius:999px;font-size:13px;' +
+      'font-family:sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25);pointer-events:none;';
+    document.body.appendChild(el);
+  }
+  el.textContent = '⏳ ' + (msg || 'Cargando…');
+  el.style.display = 'block';
+}
+function hideLoadingSoft() {
+  const el = document.getElementById('soft-load');
+  if (el) el.style.display = 'none';
+}
+
 // ══════════════════════════════════════════════════════════════════
 // API
 // ══════════════════════════════════════════════════════════════════
@@ -2654,7 +2673,7 @@ function fileToBase64(file) {
 async function cargarResumenAdmin() {
   if (STATE._cargandoResumen) return;        // cerrojo: evita llamadas superpuestas / loop
   STATE._cargandoResumen = true;
-  showLoading('Cargando resumen...');
+  showLoadingSoft('Cargando resumen...');
   try {
     // 1 sola llamada: resumen + pagos pendientes (antes eran 2 en serie)
     const res = await api('getDashboardAdmin');
@@ -2674,7 +2693,7 @@ async function cargarResumenAdmin() {
     toast('No se pudo conectar. Reintentá en unos segundos.', 'error');
   } finally {
     // SIEMPRE se ejecuta, pase lo que pase: nunca queda en "Cargando resumen".
-    hideLoading();
+    hideLoadingSoft();
     STATE._cargandoResumen = false;
   }
 }
@@ -2771,7 +2790,7 @@ async function cargarEstadisticas() {
   showLoading('Calculando estadísticas...');
   const mes = document.getElementById('select-mes-stats')?.value || '';
   const res = await api('getEstadisticas', { mes });
-  hideLoading();
+  hideLoadingSoft();
   
   if (res.ok) {
     STATE.estadisticas = res.estadisticas;
@@ -2812,9 +2831,9 @@ function renderEstadisticas() {
 }
 
 async function cargarComprobantesAdmin() {
-  showLoading('Cargando comprobantes...');
+  showLoadingSoft('Cargando comprobantes...');
   const res = await api('getAllPagos');
-  hideLoading();
+  hideLoadingSoft();
   if (res.ok) {
     STATE.todosLosPagos = res.pagos;
     STATE.cache.comprobantes = Date.now();
@@ -2936,10 +2955,10 @@ function filtrarComprobantes(filtro, btn) {
 }
 
 async function cargarJugadoresAdmin() {
-  showLoading('Cargando jugadores...');
+  showLoadingSoft('Cargando jugadores...');
   const equipoId = document.getElementById('filtro-equipo-jugadores')?.value || '';
   const res = await api('getJugadoresAdmin', { equipoId, estado: 'Activo' });
-  hideLoading();
+  hideLoadingSoft();
   if (res.ok) {
     STATE.jugadoresAdmin = res.jugadores;
     STATE.cache.jugadoresAdmin = Date.now();
@@ -3520,10 +3539,10 @@ async function confirmarBaja() {
 
 // --- Sección Bajas ---
 async function cargarBajasAdmin() {
-  showLoading('Cargando bajas...');
+  showLoadingSoft('Cargando bajas...');
   const equipoId = document.getElementById('filtro-equipo-bajas')?.value || '';
   const res = await api('getJugadoresAdmin', { equipoId, estado: 'Baja' });
-  hideLoading();
+  hideLoadingSoft();
   if (res.ok) STATE.bajasAdmin = res.jugadores;
   renderBajasAdmin();
 }
