@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v2.8 — 2026-06-19 13:20 ARG (Categoria en Alta/Editar ahora es campo libre con sugerencias -datalist-: se puede elegir Caballeros/Master/Superior/juveniles o escribir cualquier otra) -->
+<!-- PAGOS HOCKEY CDP — Frontend v2.9 — 2026-10-19 23:55 ARG (Equipo editable con sugerencias -incluye Sub 8/10/12/14/16 y texto libre- en Editar; boton PDF Listado: reporte imprimible con resumen por equipo/categoria y tabla completa) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1434,6 +1434,7 @@ tr:hover td { background: var(--gray-50); }
           <option value="">Todos los equipos</option>
         </select>
         <button class="btn btn-lavender" onclick="abrirModalAltaAdmin()">➕ Agregar Jugador</button>
+        <button class="btn btn-mint" onclick="generarPDFListado()">📄 PDF Listado</button>
       </div>
       
       <div class="card">
@@ -1811,7 +1812,8 @@ tr:hover td { background: var(--gray-50); }
       <input type="hidden" id="edit-jugador-id">
       <div class="form-group">
         <label>Equipo</label>
-        <select id="edit-equipo" required></select>
+        <input type="text" id="edit-equipo" list="lista-equipos" placeholder="Elegí uno o escribí el que quieras" required>
+        <datalist id="lista-equipos"></datalist>
       </div>
       <div class="form-group">
         <label>Nombre Completo</label>
@@ -3433,15 +3435,18 @@ function abrirModalEdit(jugadorId) {
   const j = (STATE.jugadoresAdmin || []).find(x => String(x.id) === String(jugadorId));
   if (!j) { toast('No se encontró el jugador', 'error'); return; }
 
-  // Llenar select de equipos y preseleccionar
-  const selEq = document.getElementById('edit-equipo');
-  selEq.innerHTML = '';
+  // Sugerencias de equipo: los equipos reales + las subcategorías + lo que se escriba
+  const dlEq = document.getElementById('lista-equipos');
+  dlEq.innerHTML = '';
   STATE.equipos.forEach(eq => {
-    selEq.innerHTML += `<option value="${eq.id}">${eq.nombre}</option>`;
+    dlEq.innerHTML += `<option value="${eq.id}"></option>`;
+  });
+  ['SUB 8','SUB 10','SUB 12','SUB 14','SUB 16'].forEach(s => {
+    if (!STATE.equipos.some(eq => eq.id === s)) dlEq.innerHTML += `<option value="${s}"></option>`;
   });
 
   document.getElementById('edit-jugador-id').value = j.id;
-  selEq.value = j.equipoId;
+  document.getElementById('edit-equipo').value = j.equipoId;
   document.getElementById('edit-nombre').value = j.nombre || '';
   document.getElementById('edit-dni').value = j.dni || '';
   document.getElementById('edit-fechanac').value = j.fechaNac || '';
@@ -3566,6 +3571,90 @@ async function reactivarJugador(jugadorId, nombre) {
   } else {
     toast(res.msg || 'Error al reactivar', 'error');
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PDF — Listado completo de jugadores (resumen + tabla) para imprimir/guardar
+// ══════════════════════════════════════════════════════════════════
+async function generarPDFListado() {
+  // Abrir la ventana YA (dentro del click) para que no la bloquee el navegador
+  const w = window.open('', '_blank');
+  if (!w) { toast('Permití las ventanas emergentes para generar el PDF', 'error'); return; }
+  w.document.write('<p style="font-family:sans-serif;padding:24px;color:#444">Generando listado…</p>');
+
+  showLoading('Generando listado...');
+  const res = await api('getJugadoresAdmin', { estado: 'Activo' });
+  hideLoading();
+  if (!res.ok) { w.close(); toast(res.msg || 'No se pudo generar', 'error'); return; }
+
+  const jugs = (res.jugadores || []).slice().sort((a, b) => {
+    const c = String(a.equipoId).localeCompare(String(b.equipoId), 'es');
+    return c !== 0 ? c : String(a.nombre).localeCompare(String(b.nombre), 'es');
+  });
+
+  const porEquipo = {}, porCat = {};
+  jugs.forEach(j => {
+    const e = j.equipoId || '(sin equipo)';
+    const c = j.categoria || '(sin categoría)';
+    porEquipo[e] = (porEquipo[e] || 0) + 1;
+    porCat[c] = (porCat[c] || 0) + 1;
+  });
+
+  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const filas = jugs.map((j, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td class="nom">${esc(j.nombre)}</td>
+      <td>${esc(j.equipoId)}</td>
+      <td>${esc(j.categoria || '-')}</td>
+      <td>${esc(j.dni || '-')}</td>
+      <td>${esc(j.fechaNac || '-')}</td>
+      <td>${esc(j.tipoCuota || '-')}</td>
+      <td class="obs">${esc(j.observaciones || '')}</td>
+    </tr>`).join('');
+
+  const resEq = Object.keys(porEquipo).sort().map(k => `<li>${esc(k)}: <b>${porEquipo[k]}</b></li>`).join('');
+  const resCat = Object.keys(porCat).sort().map(k => `<li>${esc(k)}: <b>${porCat[k]}</b></li>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>Listado de Jugadores - Hockey CDP</title>
+<style>
+  *{box-sizing:border-box;}
+  body{font-family:Arial,Helvetica,sans-serif;color:#1f2937;margin:24px;}
+  h1{color:#2855A4;margin:0 0 2px;font-size:20px;}
+  .sub{color:#6b7280;font-size:12px;margin-bottom:16px;}
+  .total{font-size:14px;font-weight:bold;color:#2855A4;}
+  .resumen{display:flex;gap:32px;flex-wrap:wrap;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;}
+  .resumen h3{margin:0 0 6px;font-size:13px;color:#166534;}
+  .resumen ul{margin:0;padding-left:16px;}
+  table{width:100%;border-collapse:collapse;font-size:11px;}
+  th{background:#2855A4;color:#fff;text-align:left;padding:6px 8px;}
+  td{padding:5px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top;}
+  tr:nth-child(even) td{background:#f9fafb;}
+  .nom{font-weight:bold;}
+  .obs{color:#6b7280;}
+  .btn{background:#2E8B4A;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer;margin-bottom:16px;}
+  @media print{body{margin:10mm;} .noprint{display:none;} th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+</style></head><body>
+  <button class="btn noprint" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+  <h1>🏑 Club de Profesionales — Listado de Jugadores</h1>
+  <div class="sub">Hockey CDP · Generado el ${hoy} · <span class="total">${jugs.length} jugadores activos</span></div>
+  <div class="resumen">
+    <div><h3>Por equipo</h3><ul>${resEq}</ul></div>
+    <div><h3>Por categoría</h3><ul>${resCat}</ul></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Nombre</th><th>Equipo</th><th>Categoría</th><th>DNI</th><th>Nac.</th><th>Tipo Cuota</th><th>Obs.</th></tr></thead>
+    <tbody>${filas}</tbody>
+  </table>
+  <scr`+`ipt>setTimeout(function(){try{window.print();}catch(e){}},400);</scr`+`ipt>
+</body></html>`;
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 }
 
 // Modal Alta Admin
