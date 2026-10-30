@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v2.12 — 2026-10-29 22:10 ARG (Filtro de Jugadores: ahora incluye Sub 8/10/12/14/16 y filtra por equipo O categoria, instantaneo del lado del cliente -una sola carga, sin pedir datos por cada cambio de filtro-) -->
+<!-- PAGOS HOCKEY CDP — Frontend v2.13 — 2026-10-29 22:40 ARG (PDF Listado: se abre con casilleros por categoria -no se imprimen-; tildas una o varias y el listado + resumen se recalculan al instante antes de imprimir/guardar) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -3647,9 +3647,10 @@ async function generarPDFListado() {
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  const filas = jugs.map((j, i) => `
-    <tr>
-      <td>${i + 1}</td>
+  const catKey = j => (j.categoria && String(j.categoria).trim()) ? String(j.categoria).trim() : '(sin categoría)';
+  const filas = jugs.map((j) => `
+    <tr data-eq="${esc(j.equipoId)}" data-cat="${esc(catKey(j))}">
+      <td class="num"></td>
       <td class="nom">${esc(j.nombre)}</td>
       <td>${esc(j.equipoId)}</td>
       <td>${esc(j.categoria || '-')}</td>
@@ -3658,6 +3659,9 @@ async function generarPDFListado() {
       <td>${esc(j.tipoCuota || '-')}</td>
       <td class="obs">${esc(j.observaciones || '')}</td>
     </tr>`).join('');
+
+  const catsOrden = Object.keys(porCat).sort();
+  const checksHtml = catsOrden.map(c => `<label style="display:inline-flex;align-items:center;gap:5px;margin:0 14px 8px 0;font-size:13px;white-space:nowrap;cursor:pointer"><input type="checkbox" class="fcat" value="${esc(c)}" checked> ${esc(c)} <span style="color:#6b7280">(${porCat[c]})</span></label>`).join('');
 
   const resEq = Object.keys(porEquipo).sort().map(k => `<li>${esc(k)}: <b>${porEquipo[k]}</b></li>`).join('');
   const resCat = Object.keys(porCat).sort().map(k => `<li>${esc(k)}: <b>${porCat[k]}</b></li>`).join('');
@@ -3679,21 +3683,47 @@ async function generarPDFListado() {
   tr:nth-child(even) td{background:#f9fafb;}
   .nom{font-weight:bold;}
   .obs{color:#6b7280;}
-  .btn{background:#2E8B4A;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer;margin-bottom:16px;}
-  @media print{body{margin:10mm;} .noprint{display:none;} th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+  .btn{background:#2E8B4A;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer;}
+  .toolbar{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;padding:12px 14px;margin-bottom:16px;}
+  .mini{margin-left:6px;font-size:12px;padding:2px 8px;border:1px solid #94a3b8;background:#fff;border-radius:6px;cursor:pointer;}
+  td.num{color:#6b7280;}
+  @media print{body{margin:10mm;} .noprint{display:none!important;} th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
 </style></head><body>
-  <button class="btn noprint" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+  <div class="noprint toolbar">
+    <div style="font-weight:bold;margin-bottom:8px">Filtrar categorías para imprimir:
+      <button class="mini" onclick="marcarTodos(true)">Todas</button>
+      <button class="mini" onclick="marcarTodos(false)">Ninguna</button>
+    </div>
+    <div>${checksHtml}</div>
+    <button class="btn" style="margin-top:10px" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+  </div>
   <h1>🏑 Club de Profesionales — Listado de Jugadores</h1>
-  <div class="sub">Hockey CDP · Generado el ${hoy} · <span class="total">${jugs.length} jugadores activos</span></div>
+  <div class="sub">Hockey CDP · Generado el ${hoy} · <span class="total"><span id="cnt">${jugs.length}</span> jugadores</span></div>
   <div class="resumen">
-    <div><h3>Por equipo</h3><ul>${resEq}</ul></div>
-    <div><h3>Por categoría</h3><ul>${resCat}</ul></div>
+    <div><h3>Por equipo</h3><ul id="res-eq">${resEq}</ul></div>
+    <div><h3>Por categoría</h3><ul id="res-cat">${resCat}</ul></div>
   </div>
   <table>
     <thead><tr><th>#</th><th>Nombre</th><th>Equipo</th><th>Categoría</th><th>DNI</th><th>Nac.</th><th>Tipo Cuota</th><th>Obs.</th></tr></thead>
     <tbody>${filas}</tbody>
   </table>
-  <scr`+`ipt>setTimeout(function(){try{window.print();}catch(e){}},400);</scr`+`ipt>
+  <scr`+`ipt>
+  function aplicarFiltro(){
+    var act={}; document.querySelectorAll('input.fcat').forEach(function(c){ if(c.checked) act[c.value]=1; });
+    var n=0, eqC={}, catC={};
+    document.querySelectorAll('tbody tr').forEach(function(tr){
+      var cat=tr.getAttribute('data-cat'); var show=!!act[cat];
+      tr.style.display = show ? '' : 'none';
+      if(show){ n++; tr.querySelector('.num').textContent=n; var eq=tr.getAttribute('data-eq'); eqC[eq]=(eqC[eq]||0)+1; catC[cat]=(catC[cat]||0)+1; }
+    });
+    document.getElementById('cnt').textContent=n;
+    document.getElementById('res-eq').innerHTML=Object.keys(eqC).sort().map(function(k){return '<li>'+k+': <b>'+eqC[k]+'</b></li>';}).join('');
+    document.getElementById('res-cat').innerHTML=Object.keys(catC).sort().map(function(k){return '<li>'+k+': <b>'+catC[k]+'</b></li>';}).join('');
+  }
+  function marcarTodos(v){ document.querySelectorAll('input.fcat').forEach(function(c){c.checked=v;}); aplicarFiltro(); }
+  document.querySelectorAll('input.fcat').forEach(function(c){ c.addEventListener('change', aplicarFiltro); });
+  aplicarFiltro();
+  </scr`+`ipt>
 </body></html>`;
 
   w.document.open();
