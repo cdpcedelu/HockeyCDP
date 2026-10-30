@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PAGOS HOCKEY CDP — Frontend v2.11 — 2026-10-20 10:30 ARG (UX: cargas del panel admin -resumen, estadisticas, comprobantes, jugadores, bajas- ahora NO bloquean: chip "Cargando" no bloqueante, se puede seguir navegando. Login/aprobar/subir siguen bloqueantes) -->
+<!-- PAGOS HOCKEY CDP — Frontend v2.12 — 2026-10-29 22:10 ARG (Filtro de Jugadores: ahora incluye Sub 8/10/12/14/16 y filtra por equipo O categoria, instantaneo del lado del cliente -una sola carga, sin pedir datos por cada cambio de filtro-) -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1430,7 +1430,7 @@ tr:hover td { background: var(--gray-50); }
     <div id="tab-jugadores" class="tab-content">
       <div class="mes-selector">
         <label>Equipo:</label>
-        <select id="filtro-equipo-jugadores" onchange="cargarJugadoresAdmin()">
+        <select id="filtro-equipo-jugadores" onchange="renderJugadoresAdmin()">
           <option value="">Todos los equipos</option>
         </select>
         <button class="btn btn-lavender" onclick="abrirModalAltaAdmin()">➕ Agregar Jugador</button>
@@ -2956,8 +2956,8 @@ function filtrarComprobantes(filtro, btn) {
 
 async function cargarJugadoresAdmin() {
   showLoadingSoft('Cargando jugadores...');
-  const equipoId = document.getElementById('filtro-equipo-jugadores')?.value || '';
-  const res = await api('getJugadoresAdmin', { equipoId, estado: 'Activo' });
+  // Trae TODOS los activos; el filtro por equipo/categoría se aplica en el cliente (instantáneo)
+  const res = await api('getJugadoresAdmin', { estado: 'Activo' });
   hideLoadingSoft();
   if (res.ok) {
     STATE.jugadoresAdmin = res.jugadores;
@@ -2967,11 +2967,14 @@ async function cargarJugadoresAdmin() {
 }
 
 function renderJugadoresAdmin() {
-  // Llenar filtro equipos si está vacío
+  // Llenar filtro con equipos + categorías (Sub 8/10/12/14/16) si está vacío
   const filtroEq = document.getElementById('filtro-equipo-jugadores');
   if (filtroEq.options.length <= 1) {
     STATE.equipos.forEach(eq => {
       filtroEq.innerHTML += `<option value="${eq.id}">${eq.nombre}</option>`;
+    });
+    ['SUB 8','SUB 10','SUB 12','SUB 14','SUB 16'].forEach(s => {
+      if (!STATE.equipos.some(eq => eq.id === s)) filtroEq.innerHTML += `<option value="${s}">${s}</option>`;
     });
   }
   
@@ -2980,11 +2983,17 @@ function renderJugadoresAdmin() {
     cargarJugadoresAdmin();
     return;
   }
-  
+
+  // Filtro instantáneo por equipo O categoría (normalizado)
+  const normF = x => String(x || '').trim().toUpperCase().replace(/[\s_]+/g, '_');
+  const nf = normF(filtroEq.value || '');
+  const lista = !nf ? STATE.jugadoresAdmin
+    : STATE.jugadoresAdmin.filter(j => normF(j.equipoId) === nf || normF(j.categoria) === nf);
+
   const tbody = document.getElementById('tabla-jugadores-admin');
   tbody.innerHTML = '';
   
-  STATE.jugadoresAdmin.forEach(j => {
+  lista.forEach(j => {
     const tipoBadgeClass = j.tipoCuota.includes('BONIF') || j.tipoCuota.includes('BECA') ? 'tipo-badge bonif' : 'tipo-badge';
     const obsIcon = (j.observaciones && j.observaciones.trim())
       ? `<span title="${(j.observaciones||'').replace(/"/g,'&quot;')}" style="cursor:help;">📝</span>`
@@ -3007,7 +3016,7 @@ function renderJugadoresAdmin() {
     `;
   });
 
-  if (STATE.jugadoresAdmin.length === 0) {
+  if (lista.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="icon">👥</div><h3>No hay jugadores</h3></td></tr>';
   }
 }
